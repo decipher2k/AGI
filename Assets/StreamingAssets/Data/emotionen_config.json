@@ -1,0 +1,42 @@
+{
+  "baseline": {
+    "angst": 0.0,
+    "neugier": 0.5,
+    "frustration": 0.0,
+    "zufriedenheit": 0.3,
+    "ueberraschung": 0.0
+  },
+  "decayRaten": {
+    "angst": 0.05,
+    "neugier": 0.02,
+    "frustration": 0.04,
+    "zufriedenheit": 0.02,
+    "ueberraschung": 0.15
+  },
+  "trigger": {
+    "angst": {
+      "scheitern_wiederholt": 0.3,
+      "unerwartetes_negativ": 0.2,
+      "unbekannte_umgebung": 0.15
+    },
+    "neugier": {
+      "wissensluecke": 0.25,
+      "neues_objekt": 0.2,
+      "niedrige_konfidenz": 0.15
+    },
+    "frustration": {
+      "gleiches_ziel_gescheitert": 0.35,
+      "plan_umplanung": 0.2,
+      "keine_fortschritte": 0.15
+    },
+    "zufriedenheit": {
+      "ziel_erreicht": 0.3,
+      "hypothese_bestaetigt": 0.2,
+      "kompetenz_wachstum": 0.15
+    },
+    "ueberraschung": {
+      "erwartungsverletzung": 0.5,
+      "unerwartete_sensordaten": 0.3
+    }
+  }
+}

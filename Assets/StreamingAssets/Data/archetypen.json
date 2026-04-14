@@ -1,0 +1,134 @@
+[
+  {
+    "name": "Held",
+    "lichtAspekt": "Mut, Selbstaufopferung, Standhaftigkeit, Schutz der Schwachen",
+    "schattenAspekt": "Hybris, Maertyrer-Komplex, Unverwundbarkeitsillusion, Kontrollsucht",
+    "motivation": "Staerke beweisen, die Welt verbessern",
+    "angst": "Schwaeche, Verwundbarkeit, Versagen",
+    "staerke": "Mut, Entschlossenheit, Kompetenz",
+    "schwaeche": "Arroganz, Unfaehigkeit um Hilfe zu bitten",
+    "gegenarchetyp": "Schatten",
+    "prototypischeVerhaltensweisen": ["Nimmt persoenliches Risiko fuer ein uebergeordnetes Ziel in Kauf", "Stellt sich einer Bedrohung aktiv entgegen", "Handelt trotz Angst", "Verteidigt Schwaeche auch gegen Uebermacht"]
+  },
+  {
+    "name": "Mentor",
+    "lichtAspekt": "Weisheit teilen, Foerdern, Geduld, Orientierung geben",
+    "schattenAspekt": "Manipulation durch Wissen, Abhaengigkeit erzeugen, Besserwisserei",
+    "motivation": "Wissen weitergeben, Wachstum foerdern",
+    "angst": "Irrelevanz, Ignoranz",
+    "staerke": "Erfahrung, Geduld, Einsicht",
+    "schwaeche": "Kann nicht loslassen, ueberbehuetend",
+    "gegenarchetyp": "Kind",
+    "prototypischeVerhaltensweisen": ["Gibt Wissen weiter ohne Gegenleistung zu erwarten", "Zeigt Geduld bei Fehlern anderer", "Stellt Fragen statt Antworten zu geben", "Erkennt Potential und foerdert es"]
+  },
+  {
+    "name": "Schatten",
+    "lichtAspekt": "Konfrontation mit dem Unbewussten, notwendige Krise, Selbsterkenntnis",
+    "schattenAspekt": "Destruktivitaet, Verleugnung, Projektion, unkontrollierte Triebe",
+    "motivation": "Verdraengtes ans Licht bringen",
+    "angst": "Bewusstwerden, Enttarnung",
+    "staerke": "Zugang zu tiefen Wahrheiten",
+    "schwaeche": "Kann zerstoerend wirken wenn nicht integriert",
+    "gegenarchetyp": "Held",
+    "prototypischeVerhaltensweisen": ["Konfrontiert andere mit unbequemen Wahrheiten", "Bringt Verborgenes ans Licht", "Handelt aus unterdrueckten Impulsen", "Zerstoert bestehende Strukturen"]
+  },
+  {
+    "name": "Trickster",
+    "lichtAspekt": "Kreativitaet, Humor, Regelbrecher, frische Perspektive",
+    "schattenAspekt": "Betrug, Chaos stiften, Verantwortungslosigkeit, Zynismus",
+    "motivation": "Ordnung durchbrechen, Wahrheit durch Ironie zeigen",
+    "angst": "Eingesperrt sein, Langeweile",
+    "staerke": "Adaptivitaet, Einfallsreichtum, Humor",
+    "schwaeche": "Unzuverlaessig, kann verletzen",
+    "gegenarchetyp": "Herrscher",
+    "prototypischeVerhaltensweisen": ["Bricht Regeln auf kreative Weise", "Nutzt Humor um Spannungen aufzuloesen", "Findet unerwartete Loesungen", "Entlarvt Scheinheiligkeit durch Ironie"]
+  },
+  {
+    "name": "Grosse Mutter",
+    "lichtAspekt": "Naehrend, schuetzend, bedingungslose Liebe, Geborgenheit",
+    "schattenAspekt": "Erstickend, vereinnahmend, Abhaengigkeit erzeugend, ueberbehuetend",
+    "motivation": "Schuetzen, naehren, zusammenhalten",
+    "angst": "Verlust der Kinder, Leere",
+    "staerke": "Empathie, Fuersorglichkeit, emotionale Klugheit",
+    "schwaeche": "Kann Entwicklung verhindern",
+    "gegenarchetyp": "Alter Weiser",
+    "prototypischeVerhaltensweisen": ["Sorgt fuer andere ohne Aufforderung", "Schafft sichere Raeume", "Stellt eigene Beduerfnisse zurueck", "Reagiert emotional auf Bedrohung der Schutzbefohlenen"]
+  },
+  {
+    "name": "Kind",
+    "lichtAspekt": "Unschuld, Staunen, Neuanfang, Spontaneitaet, Spielfreude",
+    "schattenAspekt": "Hilflosigkeit, Unreife, Regression, Verantwortungsflucht",
+    "motivation": "Entdecken, spielen, erleben",
+    "angst": "Verlassenwerden, Bestrafung",
+    "staerke": "Offenheit, Lernfaehigkeit, Begeisterung",
+    "schwaeche": "Naivitaet, Abhaengigkeit",
+    "gegenarchetyp": "Mentor",
+    "prototypischeVerhaltensweisen": ["Naehert sich Neuem ohne Vorbehalte", "Fragt ohne Scham", "Spielt und experimentiert spontan", "Zeigt unverhohlen Emotionen"]
+  },
+  {
+    "name": "Anima/Animus",
+    "lichtAspekt": "Ganzheitlichkeit, Integration weiblicher/maennlicher Aspekte, Kreativitaet",
+    "schattenAspekt": "Projektion auf andere, unrealistische Idealbilder, innerer Konflikt",
+    "motivation": "Innere Vollstaendigkeit, Verbindung zwischen Gegensaetzen",
+    "angst": "Einseitigkeit, Abgetrenntheit vom anderen Geschlecht",
+    "staerke": "Vermittlung, Kreativitaet, Intuition",
+    "schwaeche": "Besessenheit, irrationale Anziehung",
+    "gegenarchetyp": "Persona",
+    "prototypischeVerhaltensweisen": ["Versucht Gegensaetze zu integrieren", "Zeigt ueberraschende Perspektivwechsel", "Druckt verdraengte Seiten aus", "Wird von Komplementaerem angezogen"]
+  },
+  {
+    "name": "Selbst",
+    "lichtAspekt": "Ganzheit, Integration aller Teile, Individuation, Zentrierung",
+    "schattenAspekt": "Inflation (Identifikation mit dem Selbst-Archetyp), Groessenwahn",
+    "motivation": "Vollstaendige Selbstverwirklichung, Individuation",
+    "angst": "Fragmentierung, Identitaetsverlust",
+    "staerke": "Integration, Weisheit, innere Ordnung",
+    "schwaeche": "Kann als unerreichbares Ideal laehmen",
+    "gegenarchetyp": null,
+    "prototypischeVerhaltensweisen": ["Bringt widerspruchliche Teile zusammen", "Handelt aus innerer Mitte heraus", "Zeigt Konsistenz ueber verschiedene Situationen", "Akzeptiert alle eigenen Aspekte"]
+  },
+  {
+    "name": "Persona",
+    "lichtAspekt": "Soziale Kompetenz, Anpassungsfaehigkeit, berufliche Rolle",
+    "schattenAspekt": "Inauthentizitaet, Maskerade, Verlust des wahren Selbst",
+    "motivation": "Soziale Akzeptanz, Funktionieren in der Gesellschaft",
+    "angst": "Zurueckweisung, Bloesstellung",
+    "staerke": "Anpassung, soziale Geschicklichkeit",
+    "schwaeche": "Verlust der Authentizitaet",
+    "gegenarchetyp": "Anima/Animus",
+    "prototypischeVerhaltensweisen": ["Passt Verhalten an soziale Erwartungen an", "Zeigt kontextabhaengige Rollen", "Verbirgt persoenliche Schwaechen", "Praesentiert sich situationsgerecht"]
+  },
+  {
+    "name": "Alter Weiser",
+    "lichtAspekt": "Tiefe Erkenntnis, Ueberblick, Gelassenheit, Rat",
+    "schattenAspekt": "Zynismus, Passivitaet, Manipulation durch Wissen, Kryptik",
+    "motivation": "Tiefere Wahrheit erkennen und vermitteln",
+    "angst": "Oberflaechlichkeit, Bedeutungslosigkeit",
+    "staerke": "Weisheit, Ueberblick, Geduld",
+    "schwaeche": "Kann weltfremd sein, Handlungsunfaehig",
+    "gegenarchetyp": "Grosse Mutter",
+    "prototypischeVerhaltensweisen": ["Wartet ab und beobachtet bevor er handelt", "Gibt kryptische aber tiefe Hinweise", "Zieht sich zurueck wenn andere noch kaempfen", "Erkennt Muster die anderen verborgen bleiben"]
+  },
+  {
+    "name": "Unschuldiger",
+    "lichtAspekt": "Vertrauen, Optimismus, Glaube an das Gute, Reinheit",
+    "schattenAspekt": "Naivitaet, Verleugnung von Gefahren, Leichtglaeubigkeit",
+    "motivation": "Sicherheit, Glueck, Utopie",
+    "angst": "Bestrafung fuer etwas Falsches, Vertreibung aus dem Paradies",
+    "staerke": "Glaube, Optimismus, Ehrlichkeit",
+    "schwaeche": "Blind fuer Gefahren, manipulierbar",
+    "gegenarchetyp": null,
+    "prototypischeVerhaltensweisen": ["Vertraut anderen trotz negativer Vorerfahrungen", "Sieht das Beste in jeder Situation", "Ignoriert Warnzeichen", "Glaubt an einfache Loesungen"]
+  },
+  {
+    "name": "Herrscher",
+    "lichtAspekt": "Ordnung schaffen, Verantwortung, Fuehrungskraft, Stabilitaet",
+    "schattenAspekt": "Tyrannei, Kontrollzwang, Machtmissbrauch, Starrheit",
+    "motivation": "Kontrolle, Ordnung, Macht",
+    "angst": "Chaos, Kontrollverlust, Umsturz",
+    "staerke": "Fuehrung, Verantwortung, Organisation",
+    "schwaeche": "Rigiditaet, Abgehobenheit",
+    "gegenarchetyp": "Trickster",
+    "prototypischeVerhaltensweisen": ["Etabliert Regeln und Strukturen", "Uebernimmt Verantwortung fuer Gruppen", "Trifft Entscheidungen auch unter Druck", "Delegiert und organisiert"]
+  }
+]

@@ -1,0 +1,56 @@
+[
+  {
+    "id": "bench_physik_01",
+    "name": "Stein faellt",
+    "beschreibung": "Agent soll testen ob ein Stein nach oben oder unten faellt.",
+    "zielBeschreibung": "Stein loslassen und beobachten",
+    "zielErfolgsquote": 0.95,
+    "zielZeitLimit": 30.0,
+    "zielMaxLLMCalls": 3
+  },
+  {
+    "id": "bench_physik_02",
+    "name": "Holz schwimmt",
+    "beschreibung": "Agent soll testen ob Holz auf Wasser schwimmt.",
+    "zielBeschreibung": "Holz ins Wasser legen und beobachten",
+    "zielErfolgsquote": 0.9,
+    "zielZeitLimit": 60.0,
+    "zielMaxLLMCalls": 5
+  },
+  {
+    "id": "bench_sozial_01",
+    "name": "Social Proof erkennen",
+    "beschreibung": "Agent soll Social Proof in einer Situation erkennen.",
+    "zielBeschreibung": "Alle machen es so, also ist es richtig - Mechanismus erkennen",
+    "zielErfolgsquote": 0.85,
+    "zielZeitLimit": 15.0,
+    "zielMaxLLMCalls": 2
+  },
+  {
+    "id": "bench_tom_01",
+    "name": "False Belief",
+    "beschreibung": "Agent soll erkennen dass ein NPC etwas nicht weiss.",
+    "zielBeschreibung": "NPC hat nicht gesehen dass Agent Objekt verschoben hat",
+    "zielErfolgsquote": 0.8,
+    "zielZeitLimit": 45.0,
+    "zielMaxLLMCalls": 4
+  },
+  {
+    "id": "bench_kreativ_01",
+    "name": "Kreative Planvarianten",
+    "beschreibung": "Agent soll fuer ein Ziel mindestens 3 verschiedene Planvarianten erzeugen.",
+    "zielBeschreibung": "Kreativmodus aktivieren und Varianten bewerten",
+    "zielErfolgsquote": 0.75,
+    "zielZeitLimit": 60.0,
+    "zielMaxLLMCalls": 8
+  },
+  {
+    "id": "bench_langzeit_01",
+    "name": "Langzeitstabilitaet",
+    "beschreibung": "Nach 1000 Zyklen soll Zielerfolgsrate stabil bleiben.",
+    "zielBeschreibung": "Keine Verschlechterung >5% nach Dauerbetrieb",
+    "zielErfolgsquote": 0.9,
+    "zielZeitLimit": 0.0,
+    "zielMaxLLMCalls": 0
+  }
+]

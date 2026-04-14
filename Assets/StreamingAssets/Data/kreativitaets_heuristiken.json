@@ -1,0 +1,46 @@
+{
+  "heuristiken": [
+    {
+      "name": "analogie_transfer",
+      "beschreibung": "Loesung aus einer Domaene auf eine andere uebertragen.",
+      "gewicht": 1.0,
+      "erfolge": 0,
+      "versuche": 0
+    },
+    {
+      "name": "konzept_blending",
+      "beschreibung": "Zwei Konzepte verschmelzen um etwas Neues zu schaffen.",
+      "gewicht": 0.8,
+      "erfolge": 0,
+      "versuche": 0
+    },
+    {
+      "name": "plan_mutation",
+      "beschreibung": "Einen existierenden Plan in seiner Schrittfolge variieren.",
+      "gewicht": 0.9,
+      "erfolge": 0,
+      "versuche": 0
+    },
+    {
+      "name": "perspektivwechsel",
+      "beschreibung": "Problem aus der Sicht eines anderen Akteurs betrachten.",
+      "gewicht": 0.7,
+      "erfolge": 0,
+      "versuche": 0
+    },
+    {
+      "name": "constraint_relaxation",
+      "beschreibung": "Eine Einschraenkung temporaer lockern und pruefen was moeglich wird.",
+      "gewicht": 0.6,
+      "erfolge": 0,
+      "versuche": 0
+    },
+    {
+      "name": "inversion",
+      "beschreibung": "Problem umkehren: statt X zu tun, das Gegenteil versuchen.",
+      "gewicht": 0.5,
+      "erfolge": 0,
+      "versuche": 0
+    }
+  ]
+}

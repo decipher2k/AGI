@@ -1,0 +1,8 @@
+[
+  {"typ": "Exploration", "name": "Erkunde {bereich}", "beschreibung": "Erkunde einen unbekannten Bereich der Welt und registriere alle gefundenen Objekte.", "erfolgsbedingung": "Alle Objekte im Bereich registriert, Bereich als erkundet markiert."},
+  {"typ": "Experiment", "name": "Teste ob {hypothese}", "beschreibung": "Fuehre ein Experiment in der Welt durch um eine Hypothese zu testen.", "erfolgsbedingung": "Hypothese bestaetigt oder widerlegt mit Konfidenz > 0.7."},
+  {"typ": "Konstruktion", "name": "Baue {objekt} aus {materialien}", "beschreibung": "Sammle Materialien und konstruiere ein bestimmtes Objekt.", "erfolgsbedingung": "Objekt existiert in der Welt und ist funktional."},
+  {"typ": "Verstaendnis", "name": "Verstehe warum {phaenomen}", "beschreibung": "Untersuche ein Phaenomen und entwickle eine kausale Erklaerung.", "erfolgsbedingung": "Kausale Erklaerung mit Konfidenz > 0.7 und mindestens 2 Ebenen Tiefe."},
+  {"typ": "Sozial", "name": "Finde heraus wie {akteur} auf {handlung} reagiert", "beschreibung": "Beobachte oder interagiere mit einem Akteur um dessen Reaktion zu verstehen.", "erfolgsbedingung": "Mentales Modell des Akteurs aktualisiert."},
+  {"typ": "Revision", "name": "Revidiere mein Verstaendnis von {konzept}", "beschreibung": "Fuehre einen vollstaendigen Revisionszyklus fuer ein Konzept durch.", "erfolgsbedingung": "Konzept konvergiert, DriftScore berechnet, Rueckpropagation bei Bedarf."}
+]
