@@ -22,6 +22,7 @@ namespace BilligAGI.Kern
         private float gesamtKosten;
         private int gesamtAnfragen;
         private int fehlgeschlageneAnfragen;
+        private string aktuellesModell; // Null = config.llmModel, wird bei Fine-Tuning gewechselt
 
         public int GesamtTokens => gesamtTokens;
         public float GesamtKosten => gesamtKosten;
@@ -96,6 +97,69 @@ namespace BilligAGI.Kern
         public async Task<LLMAntwort> FreieAnfrage(string prompt, string systemPrompt = null)
         {
             return await SendeAnfrage(prompt, systemPrompt);
+        }
+
+        /// <summary>
+        /// Iteratives Reasoning: Chain-of-Thought → Selbstkritik → Korrektur → Finale Antwort.
+        /// Kostet 3-4x mehr Tokens, aber deutlich bessere Qualitaet.
+        /// </summary>
+        public async Task<LLMAntwort> IterativesNachdenken(string prompt, string systemPrompt = null, int iterationen = 3)
+        {
+            var startTime = DateTime.UtcNow;
+            int gesamtTokensLokal = 0;
+            float gesamtKostenLokal = 0f;
+
+            // Schritt 1: Erste Analyse mit Chain-of-Thought
+            string cotSystem = (systemPrompt ?? "") +
+                "\n\nDenke Schritt fuer Schritt nach. Zeige deinen Denkprozess. " +
+                "Markiere dein Zwischenergebnis mit [ZWISCHENERGEBNIS]: am Ende.";
+
+            var erstAntwort = await SendeAnfrage(prompt, cotSystem);
+            if (erstAntwort.ausFallback || erstAntwort.text.StartsWith("[FEHLER]"))
+                return erstAntwort;
+
+            gesamtTokensLokal += erstAntwort.tokensUsed;
+            gesamtKostenLokal += erstAntwort.kosten;
+            string bisherig = erstAntwort.text;
+
+            // Schritt 2-N: Iterative Selbstkritik und Verfeinerung
+            for (int i = 1; i < iterationen; i++)
+            {
+                string kritikPrompt = i < iterationen - 1
+                    ? $"Deine bisherige Analyse:\n\n{bisherig}\n\n" +
+                      "Pruefe diese Analyse kritisch:\n" +
+                      "1. Was koennte falsch oder unvollstaendig sein?\n" +
+                      "2. Welche Annahmen hast du gemacht?\n" +
+                      "3. Gibt es Gegenargumente?\n" +
+                      "Korrigiere und verfeinere deine Antwort. Markiere mit [ZWISCHENERGEBNIS]:"
+                    : $"Deine bisherige Analyse:\n\n{bisherig}\n\n" +
+                      "Formuliere jetzt eine praeзise, finale Antwort. " +
+                      "Beruecksichtige alle bisherigen Korrekturen. " +
+                      "Antworte direkt und klar — OHNE Denkprozess.";
+
+                string iterSystem = i < iterationen - 1
+                    ? "Du bist ein kritischer Reviewer deiner eigenen Analyse."
+                    : systemPrompt ?? "Antworte praezise und klar.";
+
+                var iterAntwort = await SendeAnfrage(kritikPrompt, iterSystem);
+                if (iterAntwort.ausFallback || iterAntwort.text.StartsWith("[FEHLER]"))
+                    break;
+
+                gesamtTokensLokal += iterAntwort.tokensUsed;
+                gesamtKostenLokal += iterAntwort.kosten;
+                bisherig = iterAntwort.text;
+            }
+
+            float dauer = (float)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+            return new LLMAntwort
+            {
+                text = bisherig,
+                tokensUsed = gesamtTokensLokal,
+                kosten = gesamtKostenLokal,
+                dauerMs = dauer,
+                ausFallback = false
+            };
         }
 
         private async Task<LLMAntwort> SendeAnfrage(string prompt, string systemPrompt, int maxRetries = 3)
@@ -201,7 +265,7 @@ namespace BilligAGI.Kern
         {
             var body = new JObject
             {
-                ["model"] = config.llmModel,
+                ["model"] = aktuellesModell ?? config.llmModel,
                 ["max_tokens"] = config.maxTokensProAnfrage,
                 ["messages"] = new JArray
                 {
@@ -222,7 +286,7 @@ namespace BilligAGI.Kern
 
             var body = new JObject
             {
-                ["model"] = config.llmModel,
+                ["model"] = aktuellesModell ?? config.llmModel,
                 ["max_tokens"] = config.maxTokensProAnfrage,
                 ["messages"] = messages
             };
@@ -245,6 +309,23 @@ namespace BilligAGI.Kern
 
         public float GetGesamtKosten() => gesamtKosten;
         public int GetAnzahlCalls() => gesamtAnfragen;
+
+        /// <summary>
+        /// Hot-Swap: Wechselt das aktive Modell zur Laufzeit (z.B. nach Fine-Tuning).
+        /// </summary>
+        public void WechsleModell(string neuesModell)
+        {
+            if (string.IsNullOrEmpty(neuesModell)) return;
+            string altes = aktuellesModell ?? config.llmModel;
+            aktuellesModell = neuesModell;
+            cache.Clear(); // Cache invalidieren bei Modellwechsel
+            Debug.Log($"[LLMAdapter] Modell gewechselt: {altes} → {neuesModell}");
+        }
+
+        /// <summary>
+        /// Gibt das aktuell aktive Modell zurueck (ggf. nach Fine-Tuning gewechselt).
+        /// </summary>
+        public string GetAktuellesModell() => aktuellesModell ?? config.llmModel;
 
         public string KostenReport()
         {

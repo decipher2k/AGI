@@ -1,5 +1,5 @@
 using UnityEngine;
-
+ 
 namespace BilligAGI
 {
     public enum LLMAnbieter { Anthropic, OpenAI }
@@ -33,6 +33,7 @@ namespace BilligAGI
 
         [Header("KonzeptRevision (Hermeneutischer Zirkel)")]
         public int konzeptRevisionNachNAnwendungen = 10;
+        public int konzeptRevisionSchwelle = 10;
         public int konzeptRevisionMaxPasses = 7;
         [Range(0f, 1f)] public float konzeptDriftSchwelle = 0.3f;
         public int maxRueckpropagationsTiefe = 3;
@@ -67,6 +68,9 @@ namespace BilligAGI
 
         [Header("Langzeitlernen")]
         [Range(0f, 0.1f)] public float forgettingRate = 0.01f;
+        public int langzeitMaxErfahrungen = 5000;
+        [Range(0f, 1f)] public float langzeitDriftSchwelle = 0.15f;
+        public int langzeitStabilisierungsSchwelle = 5;
 
         [Header("Konsistenzpruefung")]
         public int konsistenzPruefIntervall = 10;
@@ -77,5 +81,33 @@ namespace BilligAGI
         [Header("Sicherheit")]
         public int maxAutonomeSchritteProSitzung = 500;
         public bool notbremseAktiv = true;
+
+        [Header("Iteratives Reasoning (A)")]
+        public bool iterativesReasoningAktiv = true;
+        [Range(2, 5)] public int reasoningIterationen = 3;
+
+        [Header("DQN (B)")]
+        public bool dqnStattTabular = true;
+
+        [Header("Prediktives Weltmodell (C)")]
+        public bool weltModellAktiv = false;
+
+        [Header("Arbeitsgedaechtnis (D)")]
+        public bool arbeitsGedaechtnisAktiv = true;
+        public int arbeitsGedaechtnisMaxInteraktionen = 10;
+        public int arbeitsGedaechtnisTokenBudget = 3000;
+
+        [Header("Fine-Tuning / Selbstoptimierung")]
+        public bool fineTuningAktiv = false;
+        public string fineTuningApiUrl = "";    // Leer = leite von llmApiUrl ab
+        public int fineTuningEpochen = 3;
+        [Range(0.1f, 10f)] public float fineTuningLernrate = 1.0f;
+        public int minErfahrungenFuerFineTuning = 500;
+        public int fineTuningIntervallZyklen = 1000;
+        public int evaluierungsZyklen = 50;
+
+        [Header("Transfer-Learning")]
+        public int transferMiningIntervall = 100;       // Alle N Zyklen Schema-Mining
+        public int transferMiningSampleGroesse = 50;    // Letzte N Erfahrungen analysieren
     }
 }

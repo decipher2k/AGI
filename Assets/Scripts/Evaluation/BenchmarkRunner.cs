@@ -76,7 +76,7 @@ namespace BilligAGI.Evaluation
                 ergebnis.erfolgreich = PruefeErwartetesErgebnis(szenario);
 
                 // Lokal-Quote
-                float quote = kern.GetSemantik()?.BerechneQuote() ?? 0f;
+                float quote = kern.GetSemantik()?.BerechneLokalQuote() ?? 0f;
                 ergebnis.lokalQuote = quote;
             }
             catch (Exception ex)

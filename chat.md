@@ -4,9 +4,17 @@
 
 Iterativer Entwurf eines "Billig-AGI"-Systems: Maximum an AGI-Fähigkeit ohne eigenes Modelltraining. Verwendet LLMs (Anthropic Claude) ausschließlich als Ein-/Ausgabe-Schicht. Alles andere — Gedächtnis, Körper, Ziele, Emotionen, Selbstreflexion — wird selbst gebaut.
 
-**Ergebnis:** Vollständiger Architekturplan mit 15 Phasen, 65 Implementierungsschritten, 44 Qualitätskriterien. ~18.500–25.000 Zeilen C#. Geschätzte AGI-Nähe: ~65–75%.
+**Ergebnis:** Vollständiger Architekturplan mit 17 Phasen, 75 Implementierungsschritten, 44 Qualitätskriterien. ~21.000–28.000 Zeilen C#. Geschätzte AGI-Nähe: ~65–75%.
 
 **Status: IMPLEMENTIERUNG FORTLAUFEND (14.04.2026)**
+
+### Wartungs-Update (14.04.2026, spaeter)
+
+- Umfassende Compile-Kompatibilitaetswelle eingespielt.
+- Ursache: Schema-Drift zwischen Modellklassen und aufrufenden Modulen (alte Feldnamen vs. neue Datenmodelle).
+- Loesung: Rueckwaertskompatible Alias-Felder/Properties in Kernmodellen + gezielte Callsite-Fixes.
+- Zusatz: LINQ-`TakeLast`-Shim fuer Unity-Profile ohne native Methode.
+- Ergebnis: Build-Stabilitaet wiederhergestellt, ohne funktionale Kernarchitektur zurueckzubauen.
 
 ---
 
@@ -382,6 +390,111 @@ OpenAI-kompatibler HTTP-Server als MonoBehaviour mit HttpListener:
 
 ---
 
+## Runde 15: Verbesserungsvorschläge + AGI-Assessment
+
+**User:** "wie nahe sind wir jetzt eigentlich an agi?" + "können wir das was wir jetzt haben noch verbessern?"
+
+### Ehrliche AGI-Einschätzung
+- ~5–8% (hoch von 2–5%) — Kernintellekt zu 95%+ vom LLM
+- RL +1–2%, Mikroagenten +0.5–1%, MetaKognition +0.5%, Enriched Step 12 +1%
+- Multi-Provider/API-Server: +0% (Infrastruktur, keine Intelligenz)
+
+### Verbesserungsvorschläge (A–E)
+- A: Iterative Reasoning (Chain-of-Thought + Selbstkritik)
+- B: DQN statt Tabular Q-Learning (neuronales Netz in purem C#)
+- C: Prediktives Weltmodell (Imagination-basierte Planung, zuschaltbar)
+- D: Arbeitsgedächtnis (strukturierter Kontext-Buffer)
+- E: Abstrakte Regelinduktion (für ARC) — nicht gewählt
+
+**User wählte: A + B + C + D** ("c wäre wichtig, baue das bitte auch ein, wenn möglich deaktivierbar/zuschaltbar")
+
+---
+
+## Runde 16: Phase 16 — Iteratives Reasoning + DQN + Weltmodell + Arbeitsgedächtnis (Schritte 66–71)
+
+### A) LLMAdapter.cs — IterativesNachdenken()
+Neue Methode `IterativesNachdenken(prompt, systemPrompt, iterationen)`:
+1. **Chain-of-Thought**: Analysiere schrittweise, markiere `[ZWISCHENERGEBNIS]:`
+2. **Selbstkritik** (N Iterationen): "Was könnte falsch sein?"
+3. **Finale Antwort**: Saubere Antwort ohne Denkprozess
+- Token-Kosten kumuliert über alle Iterationen
+- Config: `iterativesReasoningAktiv`, `reasoningIterationen` (2–5)
+
+### B) DQNLerner.cs — Deep Q-Network (NEU)
+Reines C# MLP (kein Sentis/Barracuda/ONNX):
+- Architektur: 20→64→32→17 (Zustandsdim → Hidden1 → Hidden2 → AktionsTypen)
+- Xavier-Initialisierung, ReLU, SGD mit Gradient Clipping
+- **Target Network**: Stabilisiert Training (Update alle 100 Schritte)
+- **Experience Replay**: Buffer 2000, Batch 32, min 64 vor Training
+- Selbe API wie `ReinforcementLerner` → nahtloser Austausch
+- Persistenz: `dqn_gewichte.json`
+- Config: `dqnStattTabular` (default: true), Tabular bleibt als Fallback
+
+### C) PrediktivesWeltModell.cs — Imagination (NEU)
+Reines C# MLP: 37→64→32→21 (State+Action-OneHot → PredState+PredReward)
+- `Vorhersage(zustand, aktion)` → predicted state + reward + confidence
+- `SimuliereRollout(start, aktionsSequenz)` → kumulierter discounted Reward
+- `PlaneMitModell(zustand)` → evaluiert alle Aktionen, gibt beste zurück
+- Training: Buffer 3000, Batch 32, MSE-Loss
+- **Zuschaltbar/Deaktivierbar** via `config.weltModellAktiv` (default: false)
+- Persistenz: `weltmodell_gewichte.json`
+
+### D) ArbeitsGedaechtnis.cs — Strukturierter Kontext (NEU)
+11-Sektionen-Systemkontext ersetzt manuellen StringBuilder:
+1. Basis-System 2. Selbstbild 3. Emotionen 4. Ziel+Plan 5. Umgebung
+6. Soziales 7. Beliefs 8. Erinnerungen 9. Analogien 10. Physik 11. Gesprächsverlauf
+- Token-Budget-bewusst: `KuerzeAufBudget()` kürzt intelligent
+- `RegistriereInteraktion(input, antwort)` — Verlauf mitführen
+- Config: `arbeitsGedaechtnisAktiv`, `arbeitsGedaechtnisMaxInteraktionen`, `arbeitsGedaechtnisTokenBudget`
+
+### AGIKern.cs — Vollständige Verdrahtung
+- Step 8b+: ArbeitsGedaechtnis-Kontext pro Zyklus (Ziel, Emotionen, Welt, Sozial, Selbst)
+- Step 8c: Blackboard-RL-Referenzen bedingt DQN/Tabular
+- Step 10b: `WaehleAktion()` bedingt DQN/RL + WeltModell-Imagination
+- Step 12: ArbeitsGedaechtnis ersetzt StringBuilder + IterativesNachdenken statt FreieAnfrage
+- Step 15b: `Lerne()` bedingt DQN/RL + WeltModell.RegistriereTransition
+- Step 15c: MetaKognition-Stats bedingt DQN/Tabular
+- Neue Getter: `GetDQN()`, `GetArbeitsGedaechtnis()`, `GetPrediktivesWeltModell()`
+
+### AGIConfig.cs — 7 neue Felder
+`iterativesReasoningAktiv`, `reasoningIterationen`, `dqnStattTabular`, `weltModellAktiv`, `arbeitsGedaechtnisAktiv`, `arbeitsGedaechtnisMaxInteraktionen`, `arbeitsGedaechtnisTokenBudget`
+
+→ 3 neue C#-Dateien + 2 modifiziert (LLMAdapter, AGIKern) + 1 Config-Erweiterung
+
+---
+
+## Runde 17: Automatisiertes Kurrikulum-Training (Phase 17, Schritte 72–75)
+
+**User:** "irgendwie muss man das ja jetzt lernen lassen, damit es die welt kennen lernt [...] kann man das irgendwie automatisieren?"
+
+### TrainingsKurrikulum.cs — 6-Phasen-Curriculum (NEU)
+Eskalierende Trainingsphasen:
+0. **Beobachten** — "Was siehst du?", "Beschreibe deine Umgebung"
+1. **Navigieren** — "Geh zu [Objekt]", "Finde [Objekt]"
+2. **Interagieren** — "Greife [Objekt]", "Öffne [Objekt]"
+3. **Sozial** — "Sprich mit [NPC]", "Was macht [NPC]?"
+4. **Planen** — "Sammle 3 Objekte", "Finde ein Problem und löse es"
+5. **Frei** — NeugierSystem übernimmt, eigene Hypothesen
+
+Pro Phase: Mindest-Zyklen + Erfolgsquote-Schwelle für automatischen Aufstieg.
+Synthetische Inputs aus Templates + WeltZustand-Objekten + NPC-Namen.
+
+### AutoTrainer.cs — MonoBehaviour (NEU)
+- Periodischer Input-Injector (configurable Intervall)
+- Automatische Zielgenerierung via ZielManager
+- Neugier-basierte Inputs: niedrige Kompetenzen + unerforschte Objekte
+- Periodische Gedächtnis-Konsolidierung
+- Live-Statistik: Erfahrungen, Ziele✓/✗, RL-Stats, Weltmodell-Transitionen
+- Max-Zyklen-Limit als Sicherheitsmechanismus
+- API: StartTraining(), PauseTraining(), ResetTraining(), SetzePhase()
+
+### ChatUI.cs — Neue Befehle
+`/training` Status | `/training start` | `/training stop` | `/training reset` | `/training phase <0-5>`
+
+→ 2 neue C#-Dateien + 1 modifiziert (ChatUI) + 1 kleine Erweiterung (PrediktivesWeltModell)
+
+---
+
 ## Ethische Leitlinien (durchgehend)
 
 - Bewusstsein: NICHT das Ziel, wird aber NICHT aktiv ausgeschlossen
@@ -475,22 +588,23 @@ OpenAI-kompatibler HTTP-Server als MonoBehaviour mit HttpListener:
 
 ## Plan-Kennzahlen
 
-- **15 Phasen**, **65 Schritte**
-- **79 C#-Scripts** + **12 JSON-Datendateien** + **4 Persistenz-JSONs**
-- **~18.500–25.000 Zeilen C#**
+- **17 Phasen**, **75 Schritte**
+- **85 C#-Scripts** + **12 JSON-Datendateien** + **4 Persistenz-JSONs**
+- **~21.000–28.000 Zeilen C#**
 - **44 Qualitätskriterien**
 - **18-Schritte-Zyklus** (erweitert: 8b/8c/8d/10b/15b/15c) + Autonomer Modus
 - **4 Release Gates**
 - **OpenAI-kompatibler API-Server** (Port 8741)
 - **Multi-Provider LLM** (Anthropic + OpenAI-kompatibel)
+- **DQN** (reines C# MLP), **Prediktives Weltmodell**, **Iteratives Reasoning**, **Arbeitsgedächtnis**
 
 ---
 
 ## Status
 
 - ✅ Vollständiger Architekturplan (plan.md)
-- ✅ **Alle 15 Phasen implementiert (14.04.2026)**
-- ✅ 79 C#-Scripts erstellt und konsistent
+- ✅ **Alle 17 Phasen implementiert (14.04.2026)**
+- ✅ 85 C#-Scripts erstellt und konsistent
 - ✅ 12 JSON-Datendateien mit Initialdaten
 - ✅ README.md mit Setup-Anleitung
 - ✅ Multi-Provider LLM (Anthropic + OpenAI-kompatibel)
@@ -498,6 +612,11 @@ OpenAI-kompatibler HTTP-Server als MonoBehaviour mit HttpListener:
 - ✅ Echtes RL-Lernen + ML-Clustering (ohne LLM)
 - ✅ Dezentrale Mikroagenten-Architektur
 - ✅ Meta-Kognition (Strategie-Tracking, Bias-Erkennung)
+- ✅ DQN-Lerner (reines C# MLP, Experience Replay, Target Network)
+- ✅ Iteratives Reasoning (Chain-of-Thought + Selbstkritik)
+- ✅ Prediktives Weltmodell (Imagination-basierte Planung, zuschaltbar)
+- ✅ Arbeitsgedächtnis (strukturierter 11-Sektionen-Kontext, Token-Budget)
+- ✅ Automatisiertes 6-Phasen-Kurrikulum-Training (AutoTrainer)
 - ⬜ Unity-Szene aufsetzen (Terrain, Prefabs, Canvas)
 - ⬜ Referenzen im Inspector verbinden
 - ⬜ API-Key konfigurieren (Anthropic oder OpenAI-kompatibel)
@@ -515,8 +634,8 @@ OpenAI-kompatibler HTTP-Server als MonoBehaviour mit HttpListener:
 - Punkt 6 (Bewusstsein): **Nicht relevant für dieses Projekt** — wird aber nicht aktiv ausgeschlossen
 
 ### Implementierung fortlaufend
-Alle 15 Phasen des Masterplans umgesetzt:
-- 79 C#-Dateien, 12 JSON-Datendateien + 4 Persistenz-JSONs, 1 README
+Alle 17 Phasen des Masterplans umgesetzt:
+- 85 C#-Dateien, 12 JSON-Datendateien + 4 Persistenz-JSONs, 1 README
 - Modell-Konsistenz hergestellt (Property-Namen, Enum-Werte, fehlende Methoden)
-- Nachträglich erweitert: Phase 14 (RL + Emergenz + MetaKognition), Phase 15 (Multi-Provider + API-Server)
+- Nachträglich erweitert: Phase 14 (RL + Emergenz + MetaKognition), Phase 15 (Multi-Provider + API-Server), Phase 16 (Iteratives Reasoning + DQN + Prediktives Weltmodell + Arbeitsgedächtnis), Phase 17 (Automatisiertes Kurrikulum-Training)
 - Nächster Schritt: Unity-Szene aufbauen und Inspector-Referenzen verbinden

@@ -21,9 +21,12 @@ namespace BilligAGI.Modelle
     public class ErkannterMechanismus
     {
         public string name;
+        public string mechanismus { get => name; set => name = value; }
         public string kategorie;
         public float konfidenz;
         public string begruendung;
+        public string belegstelle { get => begruendung; set => begruendung = value; }
+        public string gegenmassnahme;
     }
 
     [Serializable]
@@ -33,6 +36,7 @@ namespace BilligAGI.Modelle
         public string kategorie;
         public string beschreibung;
         public List<string> erkennungsmuster = new List<string>();
+        public List<string> erkennungsMuster { get => erkennungsmuster; set => erkennungsmuster = value ?? new List<string>(); }
         public string gegenmassnahme;
         public List<string> beispiele = new List<string>();
     }

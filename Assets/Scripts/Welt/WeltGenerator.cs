@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -18,7 +19,8 @@ namespace BilligAGI.Welt
         public float noiseScale = 0.05f;
 
         [Header("NavMesh")]
-        public NavMeshSurface navMeshSurface;
+        // Use MonoBehaviour to avoid hard compile-time dependency on Unity.AI.Navigation package.
+        public MonoBehaviour navMeshSurface;
 
         public void GeneriereWelt(Modelle.WeltBeschreibung beschreibung)
         {
@@ -48,8 +50,7 @@ namespace BilligAGI.Welt
             VerteilePrefabs(objektPrefabs, beschreibung.objektDichte, beschreibung.breite, beschreibung.tiefe);
 
             // NavMesh baken
-            if (navMeshSurface != null)
-                navMeshSurface.BuildNavMesh();
+            TryBuildNavMesh();
 
             Debug.Log("[WeltGenerator] Welt generiert.");
         }
@@ -85,8 +86,7 @@ namespace BilligAGI.Welt
                     break;
             }
 
-            if (navMeshSurface != null)
-                navMeshSurface.BuildNavMesh();
+            TryBuildNavMesh();
         }
 
         private void ErzeugeTerrain(int breite, int tiefe)
@@ -179,6 +179,17 @@ namespace BilligAGI.Welt
             wand.transform.position = position;
             wand.transform.localScale = scale;
             wand.isStatic = true;
+        }
+
+        private void TryBuildNavMesh()
+        {
+            if (navMeshSurface == null) return;
+
+            MethodInfo buildMethod = navMeshSurface.GetType().GetMethod("BuildNavMesh", BindingFlags.Instance | BindingFlags.Public);
+            if (buildMethod != null)
+                buildMethod.Invoke(navMeshSurface, null);
+            else
+                Debug.LogWarning("[WeltGenerator] NavMeshSurface-Komponente ohne BuildNavMesh()-Methode.");
         }
     }
 }

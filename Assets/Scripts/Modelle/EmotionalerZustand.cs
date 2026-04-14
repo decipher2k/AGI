@@ -10,6 +10,7 @@ namespace BilligAGI.Modelle
         public float neugier;
         public float frustration;
         public float zufriedenheit;
+        public float freude { get => zufriedenheit; set => zufriedenheit = value; }
         public float ueberraschung;
         public Dictionary<string, float> vertrauen = new Dictionary<string, float>();
 

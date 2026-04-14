@@ -269,6 +269,11 @@ namespace BilligAGI.Kern
             DatenLader.Speichere("konzept_revisionen.json", historie);
         }
 
+        public List<Konzept> GetAlleKonzepte() => konzepte.Values.ToList();
+
+        public Konzept GetKonzept(string konzeptId) =>
+            konzepte.TryGetValue(konzeptId, out var k) ? k : null;
+
         private void LadeHistorie()
         {
             var geladen = DatenLader.LadeListe<KonzeptRevisionSchritt>("konzept_revisionen.json");

@@ -46,9 +46,9 @@ namespace BilligAGI.Sozial
                 analyse.aktiveArchetypen.Add(inst.archetypName);
 
             // 3. Alchemische Phase
-            analyse.alchemischePhase = alchemie.ErkennePhase(situation, verlauf);
-            analyse.transformationsImpuls = alchemie.TransformationsImpuls(
-                analyse.alchemischePhase, situation);
+            var phase = alchemie.ErkennePhase(situation, verlauf);
+            analyse.alchemischePhase = phase.ToString();
+            analyse.transformationsImpuls = alchemie.TransformationsImpuls(phase, situation);
 
             // 4. Theory of Mind — alle bekannten Entitaeten
             analyse.tomVorhersagen = new Dictionary<string, string>();

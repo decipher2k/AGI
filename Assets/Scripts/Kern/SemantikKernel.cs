@@ -234,6 +234,11 @@ namespace BilligAGI.Kern
             return (quote, config.llmUnabhaengigkeitsZielquote, quote >= config.llmUnabhaengigkeitsZielquote);
         }
 
+        public float BerechneLokalQuote()
+        {
+            return BerechneQuote().lokaleQuote;
+        }
+
         private string FormatStats(Dictionary<string, object> daten)
         {
             var (quote, ziel, erreicht) = BerechneQuote();

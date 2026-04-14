@@ -1,6 +1,6 @@
 ﻿# Plan: Billig-AGI v5 — Vollständig in Unity 3D / C#
 
-**TL;DR**: AGI-Architektur als reines Unity-3D-Projekt in C#. Die KI lebt als verkörperter Agent in einer dynamisch generierten, persistenten 3D-Welt. Sie hat echte Intentionalität (BDI), formuliert Ziele, plant Handlungen, führt sie aus und lernt aus Konsequenzen. Hermeneutischer Zirkel: Alle Wissensstrukturen sind iterativ revidierbar — und können sich in neue Konzepte aufspalten. Funktionale Emotionen modulieren Entscheidungen. Theory of Mind modelliert was andere wissen/wollen. Temporales Reasoning verankert Kausalität in der Zeit. Ein narratives Selbst gibt dem Agenten eine Geschichte. Erweitert um: LLM-Unabhängigkeitskern, SubsymbolikKernel, KreativitätsEngine, Robustheits-Modi, echtes Reinforcement Learning (ohne LLM), dezentrale Mikroagenten-Architektur, Meta-Kognition, und einen OpenAI-kompatiblen API-Server für externe Benchmarks (z.B. ARC). Multi-Provider LLM (Anthropic + OpenAI-kompatibel). Kein Python. Kein Bridge-Layer. Ein Prozess.
+**TL;DR**: AGI-Architektur als reines Unity-3D-Projekt in C#. Die KI lebt als verkörperter Agent in einer dynamisch generierten, persistenten 3D-Welt. Sie hat echte Intentionalität (BDI), formuliert Ziele, plant Handlungen, führt sie aus und lernt aus Konsequenzen. Hermeneutischer Zirkel: Alle Wissensstrukturen sind iterativ revidierbar — und können sich in neue Konzepte aufspalten. Funktionale Emotionen modulieren Entscheidungen. Theory of Mind modelliert was andere wissen/wollen. Temporales Reasoning verankert Kausalität in der Zeit. Ein narratives Selbst gibt dem Agenten eine Geschichte. Erweitert um: LLM-Unabhängigkeitskern, SubsymbolikKernel, KreativitätsEngine, Robustheits-Modi, echtes Reinforcement Learning (wahlweise Tabular Q-Learning oder DQN mit purem C#-MLP), dezentrale Mikroagenten-Architektur, Meta-Kognition, Iteratives Reasoning (Chain-of-Thought + Selbstkritik), Prediktives Weltmodell (Imagination-basierte Planung, zuschaltbar), strukturiertes Arbeitsgedächtnis (Token-Budget-bewusst), einen OpenAI-kompatiblen API-Server für externe Benchmarks (z.B. ARC), Multi-Provider LLM (Anthropic + OpenAI-kompatibel), und eine Selbstoptimierungs-Pipeline (automatischer Erfahrungs-Export → Fine-Tuning lokaler Modelle → evaluierter Modell-Hot-Swap mit Rollback). Kein Python. Kein Bridge-Layer. Ein Prozess.
 
 ---
 
@@ -97,7 +97,23 @@ billig_agi_unity/
 │   │   │   ├── InstanzClusterer.cs    # K-Means Clustering (kein LLM)
 │   │   │   ├── MikroAgent.cs          # Basis + Blackboard + AgentNetzwerk
 │   │   │   ├── Mikroagenten.cs        # 7 spezialisierte Mikroagenten
-│   │   │   └── MetaKognition.cs       # Strategie-Tracking, Lernkurve, Bias-Erkennung│   │   ├── Intentionalitaet/
+│   │   │   ├── MetaKognition.cs       # Strategie-Tracking, Lernkurve, Bias-Erkennung
+│   │   │   ├── ErfahrungsExporter.cs  # Erfahrungen → SFT/DPO/Reward JSONL
+│   │   │   ├── FineTuningManager.cs   # Fine-Tuning-Job-Verwaltung + Modell-Versionierung
+│   │   │   ├── SelbstOptimierung.cs   # Meta-Loop: Export → Fine-Tune → Evaluate → Swap/Rollback
+│   │   │   ├── TransferLerner.cs      # Schema-Mining + Cross-Domain Transfer-Learning
+│   │   │   ├── KonzeptBildung.cs      # Spontane Kategorienbildung aus unbenannten Clustern
+│   │   │   ├── KausalesReasoning.cs   # Pearls 3-Ebenen Kausal-Leiter (Assoziation, Intervention, Kontrafaktisch)
+│   │   │   ├── HypothesenEngine.cs    # Aktive Hypothesenbildung + Experimentplanung
+│   │   │   ├── EWCSchutz.cs           # Elastic Weight Consolidation (Catastrophic Forgetting Schutz)
+│   │   │   ├── KonzeptBaum.cs         # Hierarchische Abstraktion (Konzeptbaeume)
+│   │   │   ├── MetaZielSystem.cs      # Introspektionsgetriebene autonome Zielgenerierung
+│   │   │   ├── GroundingBruecke.cs    # Bidirektionales Sensory-Language Grounding
+│   │   │   ├── IntuitiverPhysikSimulator.cs  # Objektpermanenz, Trajektorien, Stabilitaet
+│   │   │   ├── MentaleSimulation.cs   # "Theater im Kopf" — Was-Wenn + Kontrafaktisch
+│   │   │   ├── LangzeitPlaner.cs      # Hierarchische Meilenstein-Planung
+│   │   │   └── SelbstCurriculum.cs    # Selbstgesteuertes Lernen + Adaptive Schwierigkeit
+│   │   ├── Intentionalitaet/
 │   │   │   ├── ZielManager.cs          # BDI: Beliefs-Desires-Intentions
 │   │   │   ├── Planer.cs               # Hierarchical Task Network (HTN)
 │   │   │   ├── Ausfuehrer.cs           # Aktionen via AGIAgent ausführen
@@ -113,6 +129,7 @@ billig_agi_unity/
 │   │   │   ├── AGIAgent.cs             # Avatar: NavMeshAgent + Rigidbody + Interaktion
 │   │   │   ├── AktionsController.cs    # Bewegen, Greifen, Ablegen, Interagieren
 │   │   │   ├── KonsistenzPruefer.cs    # Weltmodell-Konsistenz, Widerspruchsreparatur
+│   │   │   ├── WeltManipulator.cs     # Sprache → Weltveraenderung (LLM-Parse + Direkt)
 │   │   │   └── NPCVerhalten.cs        # Einfache NPCs: Sammler, Waechter, Wanderer, Beobachter, Sozial
 │   │   ├── Physik/
 │   │   │   ├── PhysikEngine.cs         # Unity Physics direkt + gelernte Regeln
@@ -1385,6 +1402,568 @@ RL-Empfehlung, Mikroagenten und Meta-Kognition.
 
 ---
 
+## Phase 16: Iteratives Reasoning + DQN + Prediktives Weltmodell + Arbeitsgedächtnis
+
+### Schritt 66: LLMAdapter.cs — Iteratives Reasoning (A)
+- Neue Methode `IterativesNachdenken(prompt, systemPrompt, iterationen)`:
+  - Schritt 1: Chain-of-Thought Analyse mit `[ZWISCHENERGEBNIS]:`-Marker
+  - Schritt 2: Selbstkritik-Iterationen ("Was könnte falsch sein?")
+  - Schritt 3: Finale saubere Antwort ohne Denkprozess
+- Konfigurierbar: `iterativesReasoningAktiv`, `reasoningIterationen` (2-5)
+- Token-Kosten kumuliert über alle Iterationen
+
+### Schritt 67: DQNLerner.cs — Deep Q-Network statt Tabular (B)
+- Pure C# MLP: 20→64→32→17 (Zustandsdim → Hidden → AktionsTypen)
+- Xavier-Initialisierung, ReLU-Aktivierung
+- SGD mit Gradient Clipping (Huber-Loss-Approximation)
+- Target Network (Update alle 100 Schritte)
+- Experience Replay (Buffer 2000, Batch 32, min 64 vor Training)
+- Selbe öffentliche API wie `ReinforcementLerner`: `WaehleAktion()`, `Lerne()`, `GetExplorationRate()`, etc.
+- Persistenz via `dqn_gewichte.json`
+- Toggle: `config.dqnStattTabular` — Tabular RL bleibt als Fallback
+
+### Schritt 68: PrediktivesWeltModell.cs — Imagination-basierte Planung (C)
+- Pure C# MLP: 37→64→32→21 (20D Zustand + 17D Aktion One-Hot → 20D Pred. Zustand + 1 Pred. Reward)
+- `Vorhersage(zustand, aktion)` → `WeltVorhersage` (predicted state + reward + confidence)
+- `SimuliereRollout(startZustand, aktionsSequenz)` → kumulierter discounted Reward
+- `PlaneMitModell(zustand)` → evaluiert alle Aktionen, gibt beste + erwarteten Reward zurück
+- `RegistriereTransition(vorher, aktion, nachher, belohnung)` — Trainingsdaten sammeln
+- Training: Buffer 3000, Batch 32, MSE-Loss mit Gradient Clipping
+- Toggle: `config.weltModellAktiv` (default: false) — komplett deaktivierbar
+- Persistenz via `weltmodell_gewichte.json`
+
+### Schritt 69: ArbeitsGedaechtnis.cs — Strukturierter Kontext-Buffer (D)
+- 11-Sektionen-Systemkontext: Basis, Selbstbild, Emotionen, Ziel+Plan, Umgebung, Soziales, Beliefs, Erinnerungen, Analogien, Physik-Warnungen, Gesprächsverlauf
+- Token-Budget-bewusst: `KuerzeAufBudget()` kürzt intelligent
+- Kontext-Update-Methoden: `AktualisiereZiel()`, `AktualisiereEmotionen()`, `AktualisiereSelbstModell()`, `AktualisiereWelt()`, `AktualisiereSozialesUmfeld()`, `SetzeBeliefs()`
+- `RegistriereInteraktion(input, antwort)` — Gesprächsverlauf
+- `BaueSystemKontext(basis, erinnerungen, analogien, physikCheck)` — ersetzt manuellen StringBuilder im AGI-Kern
+
+### Schritt 70: AGIConfig.cs — Neue Konfigurationsfelder
+- `iterativesReasoningAktiv` (bool, default: true)
+- `reasoningIterationen` (int, Range 2-5, default: 3)
+- `dqnStattTabular` (bool, default: true)
+- `weltModellAktiv` (bool, default: false)
+- `arbeitsGedaechtnisAktiv` (bool, default: true)
+- `arbeitsGedaechtnisMaxInteraktionen` (int, default: 10)
+- `arbeitsGedaechtnisTokenBudget` (int, default: 3000)
+
+### Schritt 71: AGIKern.cs — Verdrahtung Phase 16
+- Neue Felder: `dqn`, `arbeitsGedaechtnis`, `prediktivesModell`
+- Initialisiere(): Bedingte Erstellung von DQN, ArbeitsGedaechtnis, PrediktivesWeltModell
+- Step 8b+: ArbeitsGedaechtnis-Kontext pro Zyklus aktualisieren
+- Step 8c: Blackboard-RL-Referenzen bedingt DQN oder Tabular
+- Step 10b: `WaehleAktion()` bedingt DQN/RL + WeltModell-Imagination
+- Step 12: ArbeitsGedaechtnis ersetzt manuellen StringBuilder + IterativesNachdenken statt FreieAnfrage
+- Step 15b: `Lerne()` bedingt DQN/RL + WeltModell.RegistriereTransition
+- Step 15c: MetaKognition-RL-Stats bedingt DQN/Tabular
+- Neue Getter: `GetDQN()`, `GetArbeitsGedaechtnis()`, `GetPrediktivesWeltModell()`
+
+---
+
+## Phase 17: Automatisiertes Kurrikulum-Training
+
+### Schritt 72: TrainingsKurrikulum.cs — 6-Phasen-Curriculum
+Eskalierende Trainingsphasen mit aufsteigender Komplexitaet:
+- **Phase 0: Beobachten** — Umgebung wahrnehmen, Objekte benennen
+- **Phase 1: Navigieren** — Zu Objekten/Orten bewegen
+- **Phase 2: Interagieren** — Objekte manipulieren (greifen, oeffnen, aktivieren)
+- **Phase 3: Sozial** — Mit NPCs interagieren, Theory of Mind trainieren
+- **Phase 4: Planen** — Multi-Schritt-Ziele verfolgen
+- **Phase 5: Frei** — Neugier-getrieben, eigene Hypothesen verfolgen
+
+Pro Phase: Mindest-Zyklen + Erfolgsquote-Schwelle fuer Aufstieg.
+Synthetische Input-Templates + automatische Zielgenerierung pro Phase.
+
+### Schritt 73: AutoTrainer.cs — MonoBehaviour fuer automatisiertes Training
+- `trainingAktiv`: Ein/Aus-Schalter
+- `trainingsIntervall`: Sekunden zwischen synthetischen Inputs
+- `maxZyklenProSitzung`: Limit fuer unkontrolliertes Laufen
+- Generiert synthetische Inputs ueber TrainingsKurrikulum
+- Verwaltet Explorationsziele ueber ZielManager
+- Neugier-basierte Inputs: SelbstModell-Kompetenzen + unerforschte Weltobjekte
+- Periodische Konsolidierung (Gedaechtnis)
+- Tracking: Erfahrungen, Ziele, RL/DQN-Stats, Weltmodell-Transitionen, Belohnungshistorie
+- Phasen-Aufstieg: Automatisch bei genuegend Erfolgsquote
+- NPC-Cache: FindObjectsByType<NPCVerhalten> mit Intervall-Refresh
+- Oeffentliche API: StartTraining(), PauseTraining(), ResetTraining(), SetzePhase(), GetStatistik()
+
+### Schritt 74: ChatUI.cs — Trainings-Befehle
+- `/training` — Status anzeigen
+- `/training start` — Training starten
+- `/training stop` — Training pausieren
+- `/training reset` — Training zuruecksetzen
+- `/training phase <0-5>` — Phase manuell setzen
+
+### Schritt 75: PrediktivesWeltModell.cs — GetAnzahlTransitionen()
+- Neue Methode fuer Statistik-Abfrage durch AutoTrainer
+
+---
+
+## Phase 18: Selbstoptimierung / Fine-Tuning Pipeline
+
+### Schritt 76: ErfahrungsExporter.cs — Training-Daten aus Erfahrungen
+Konvertiert AGI-Erfahrungen in 3 Trainingsformate:
+- **SFT (Supervised Fine-Tuning)**: JSONL im OpenAI-Chat-Format, gefiltert nach `belohnung >= 0.3`
+- **DPO (Direct Preference Optimization)**: Chosen/Rejected-Paare aus guten/schlechten Erfahrungen mit aehnlichem Kontext
+- **Reward-Dataset**: Alle Erfahrungen mit Belohnungssignal + Metadaten
+- Qualitaetsfilter: Sortierung nach `belohnung * relevanz`, Min-Laenge-Pruefung
+- DPO-Pairing: Wort-Overlap-Aehnlichkeit > 0.3 fuer sinnvolle Vergleichspaare
+- Export nach `Application.persistentDataPath/training_data/`
+
+### Schritt 77: FineTuningManager.cs — Job-Verwaltung + Modell-Versionierung
+Steuert Fine-Tuning-Pipeline fuer lokale Modelle via OpenAI-kompatible API:
+- **Job-Lifecycle**: StarteFineTuning() → PruefeJobStatus() → AktiviereNeuestesModell()
+- **Modell-Versionierung**: `ModellHistorie` mit Generationen (0=Basis, 1=1. Fine-Tune, ...)
+- **Evaluierungs-Tracking**: vorherBelohnung vs. nachherBelohnung pro Generation
+- **Rollback**: `RollbackModell()` — zurueck zur vorherigen Generation oder zum Basismodell
+- **API-Integration**: `/v1/fine-tuning/jobs` + `/v1/files` (File-Upload)
+- **Backends**: LM Studio, Unsloth, Axolotl — alles was OpenAI-kompatible FT-API bietet
+- **Persistenz**: `modell_historie.json` in Application.persistentDataPath
+
+### Schritt 78: SelbstOptimierung.cs — Meta-Loop Orchestrator
+MonoBehaviour das den gesamten Selbstverbesserungs-Kreislauf steuert:
+- **Phasen**: Warten → Exportieren → TrainingLaeuft → ModellWechsel → Evaluierung → Entscheidung
+- **Logik**: Nach `minErfahrungenFuerFineTuning` und `fineTuningIntervallZyklen` automatisch:
+  1. Beste Erfahrungen exportieren (SFT + DPO)
+  2. Fine-Tuning-Job starten
+  3. Periodisch Status pollen (alle 30s)
+  4. Bei Erfolg: Modell in LLMAdapter hot-swappen
+  5. `evaluierungsZyklen` Zyklen mit neuem Modell messen
+  6. Vergleich: besser → behalten, schlechter → Rollback
+- **Manuelle API**: ErzwingeFineTuning(), ManuellRollback(), StarteOptimierung(), PauseOptimierung()
+- **Statistik**: Durchlaeufe, erfolgreiche Updates, Rollbacks, kumulierte Verbesserung
+
+### Schritt 79: LLMAdapter.cs — Modell Hot-Swap
+- `WechsleModell(string neuesModell)` — wechselt aktives Modell zur Laufzeit
+- `GetAktuellesModell()` — gibt aktuell aktives Modell zurueck
+- Body-Builder (Anthropic/OpenAI) nutzen `aktuellesModell ?? config.llmModel`
+- Cache-Invalidierung bei Modellwechsel
+
+### Schritt 80: AGIConfig.cs — Fine-Tuning-Konfiguration
+Neue Felder unter `[Header("Fine-Tuning / Selbstoptimierung")]`:
+- `fineTuningAktiv` (bool, default: false)
+- `fineTuningApiUrl` (string, leer = leite von llmApiUrl ab)
+- `fineTuningEpochen` (int, default: 3)
+- `fineTuningLernrate` (float, default: 1.0)
+- `minErfahrungenFuerFineTuning` (int, default: 500)
+- `fineTuningIntervallZyklen` (int, default: 1000)
+- `evaluierungsZyklen` (int, default: 50)
+
+### Schritt 81: Integration in AGIKern, AutoTrainer, ChatUI
+- **AGIKern**: Initialisiert ErfahrungsExporter, FineTuningManager, SelbstOptimierung; neue Getter
+- **AutoTrainer**: Ruft `SelbstOptimierung.RegistriereZyklus()` nach jedem Trainingsschritt auf
+- **ChatUI**: `/finetuning` Befehle: status, start, rollback, an/aus
+
+**Verifikation Phase 18:** Agent trainiert 500+ Erfahrungen → Daten werden exportiert → Fine-Tuning-Job wird gestartet → bei Erfolg wird neues Modell aktiviert → Evaluation zeigt Verbesserung → Modell wird behalten (oder Rollback bei Verschlechterung). `/finetuning status` zeigt Generation, Modell und Statistik.
+
+---
+
+## Phase 19: Chat-gesteuerte Weltmanipulation
+
+### Schritt 82: WeltManipulator.cs — Bruecke zwischen Sprache und Welt
+Ermoeglicht natuerlichsprachliche Weltveraenderungen per Chat oder AGI-Entscheidung:
+- **7 Befehlstypen**: SzenarioErstellen, ObjektSpawnen, ObjektEntfernen, ObjektBewegen, WetterAendern, TageszeitAendern, PhysikEvent
+- **LLM-basiertes Parsing**: Natuerliche Sprache → LLM analysiert → JSON-Array von WeltBefehlen → Ausfuehrung
+  - Systemp-Prompt mit Beispielen fuer robustes Parsing
+  - JSON-Array-Extraktion (toleriert Markdown-Bloecke)
+- **Schnell-Check**: `EnthaeltWeltIntent()` prueft auf Welt-Keywords vor LLM-Call (spart Kosten)
+- **Direkt-Modus**: `FuehreDirektBefehlAus()` fuer `/szene`-Kommandos ohne LLM
+- **Fuzzy-Objektsuche**: Name-Contains-Matching wenn exakter Name nicht gefunden wird
+- **Freie-Position-Suche**: Raycast-basiert fuer automatische Platzierung
+- **Notbremse**: Blockiert alle Manipulationen wenn aktiv
+
+### Schritt 83: AGIKern.cs — Schritt 12b: WELT MANIPULIEREN
+Neuer Verarbeitungsschritt im 18-Schritte-Zyklus (jetzt 19 Schritte):
+- Nach NACHDENKEN (Schritt 12), vor HANDELN (Schritt 13)
+- Prueft ob User-Input Weltveraenderungen impliziert
+- Bei Erfolg: Beschreibung der Aenderung an Antwort angehaengt
+- WeltGenerator-Referenz als neue Inspector-Referenz auf AGIKern
+
+### Schritt 84: ChatUI.cs — /szene Befehle
+Direkte Weltmanipulation ohne LLM-Umweg:
+- `/szene erstelle wald|garten|teich|wiese` — Szenario generieren
+- `/szene spawn <prefab> [x,y,z]` — Objekt platzieren
+- `/szene entferne <name>` — Objekt entfernen
+- `/szene bewege <name> x,y,z` — Objekt verschieben
+- `/szene wetter regen|schnee|nebel|sturm|klar [0-1]` — Wetter aendern
+- `/szene zeit <0-24>` — Tageszeit setzen
+- `/szene event explosion [x,y,z]` — Physik-Event ausloesen
+
+**Verifikation Phase 19:** "Erstelle einen Wald mit Regen" im Chat → LLM parst in SzenarioErstellen + WetterAendern → Wald-Terrain + Vegetation werden generiert, Regen-Partikel starten. `/szene spawn kiste 5,0,3` → Kiste erscheint bei Position. Agent kann in autonomem Modus Weltveraenderungen vorschlagen.
+
+---
+
+## Phase 20: Transfer-Learning
+
+### Schritt 85: TransferLerner.cs — Domaenenuebergreifendes Lernen
+Extrahiert abstrakte Handlungsschemata aus Erfahrungen und wendet sie in neuen Domaenen an:
+- **Schema-Mining**: Periodisch (alle N Zyklen) werden Erfahrungen geclustert (Aktionstyp+Ergebnis + Subsymbolisches K-Means) → LLM abstrahiert domaenenunabhaengige Regeln
+- **Schema-Matching**: Neue Situation → Vorfilter (Keyword-Overlap, Konfidenz, Erfolgsrate, Cross-Domain-Bonus) → LLM bewertet strukturelle Uebertragbarkeit
+- **Schema-Update**: Bayesianisches Konfidenz-Update nach jeder Anwendung, Abwertung bei dauerhafter Misserfolgsrate
+- **Persistenz**: Schemata werden auf Disk gespeichert (transfer_schemata.json) und beim Start geladen
+- **Kausalgraph-Integration**: Abstrakte Kausalstrukturen werden als "prinzip"-Ebene in den KausalGraph geschrieben
+- **5 Domaenen-Kategorien**: physik_manipulation, sozial_interaktion, navigation, planung, konstruktion
+
+### Schritt 86: AGIKern.cs — Schritt 15d TRANSFER-LERNEN
+- Neuer Schritt im Verarbeitungszyklus zwischen LERNEN und KONZEPTE PRUEFEN
+- Ruft `transferLerner.ZyklusTick(input, zustandsVektor)` auf
+- Bei gefundenem Schema: Beliefs ins Arbeitsgedaechtnis schreiben (Transfer-Info + Empfohlene Aktion)
+- Getter: `GetTransferLerner()`
+
+### Schritt 87: ChatUI.cs — /transfer Befehle
+- `/transfer status` — Zeigt Anzahl Schemata, naechstes Mining, Top-5 nach Konfidenz
+- `/transfer mining` — Erzwingt sofortiges Schema-Mining
+- `/transfer schemata` — Listet alle Schemata mit Details (Name, Konfidenz, Regel, Domaene, Erfolgsrate)
+
+### Schritt 88: AGIConfig.cs — Transfer-Learning Konfiguration
+- `transferMiningIntervall` (int, 100) — Alle N Zyklen Schema-Mining durchfuehren
+- `transferMiningSampleGroesse` (int, 50) — Letzte N Erfahrungen fuer Mining analysieren
+
+**Verifikation Phase 20:** Agent lernt in Domaene A (z.B. "Kisten greifen und stapeln") → Schema-Mining extrahiert: "Wenn [Objekt] nah und greifbar → GREIFEN → BEWEGEN → ABLEGEN → [Objekt] an Zielort". Agent wird in Domaene B platziert (z.B. "Werkzeuge sortieren") → TransferLerner erkennt strukturelle Aehnlichkeit → empfiehlt Schema → Agent wendet es an → Erfolg aktualisiert Konfidenz. `/transfer schemata` zeigt Schema mit angewandten Domaenen.
+
+---
+
+## Phase 21: Konzeptbildung / Abstraktion
+
+### Schritt 89: Konzept.cs — KonzeptTyp.Emergent hinzugefuegt
+- Neuer Enum-Wert `Emergent` fuer automatisch entdeckte Konzepte
+- Behebt bestehenden Bug in KonzeptRevision.VerschmelzeKonzepte()
+
+### Schritt 90: KonzeptBildung.cs — Spontane Kategorienbildung
+Entdeckt unbenannte Muster in subsymbolischen Clustern und erfindet neue Konzepte:
+- **Trigger**: SubsymbolikKernel.ErkenneVerdecktesMuster() findet >=3 unbenannte Zustaende in einem Cluster
+- **Clustering**: 64D-Vektoren der unbenannten Zustaende → K-Means++ (eigene Impl. fuer 64D, Elbow-Methode)
+- **Benennung**: LLM analysiert die zugehoerigen Erfahrungen → erfindet Name + Definition + Abgrenzung
+- **Registrierung**: Neues Konzept wird bei KonzeptRevision als `Emergent` registriert → unterliegt ab jetzt dem hermeneutischen Zirkel
+- **Tagging**: Alle stuetzenden Erfahrungen werden mit dem neuen Konzept getaggt
+- **Labeling**: Subsymbolische Zustaende werden mit dem Konzeptnamen gelabelt → kuenftige Fusion profitiert
+- **Kausalhypothese**: Falls LLM eine vermutete Ursache-Wirkung identifiziert → wird als "mechanismus"-Ebene im KausalGraph gespeichert
+- **Duplikat-Erkennung**: ClusterKey-Hashing verhindert doppelte Analyse desselben Clusters
+
+### Schritt 91: AGIKern.cs — Schritt 16 KONZEPTE PRUEFEN
+- KonzeptBildung.ZyklusTick() wird in Schritt 16 des Verarbeitungszyklus aufgerufen
+- Bei neuer Entdeckung: Debug-Log mit Zusammenfassung
+- Getter: `GetKonzeptBildung()`
+
+### Schritt 92: ChatUI.cs — /konzeptbildung Befehle
+- `/konzeptbildung status` — Zeigt Anzahl entdeckter Konzepte + naechste Pruefung
+- `/konzeptbildung jetzt` — Erzwingt sofortige Analyse
+
+**Verifikation Phase 21:** Agent trainiert 50+ Erfahrungen → SubsymbolikKernel einbettet alles → nach Pruefungsintervall findet ErkenneVerdecktesMuster() unbenannte Cluster → KonzeptBildung clustert 64D-Vektoren → LLM analysiert z.B. 5 Erfahrungen wo Agent immer gegen Waende laeuft → erfindet Kategorie "Sackgassen-Situation" → Konzept wird als Emergent registriert → kuenftige Erfahrungen werden dagegen geprueft → KonzeptRevision revidiert nach N Anwendungen ob die Definition noch stimmt.
+
+---
+
+## Phase 22: Kausales Reasoning + Hypothesenbildung
+
+### Schritt 93: KausalesReasoning.cs — Pearls 3-stufige Kausal-Leiter
+Echtes kausales Denken statt nur Korrelation:
+- **Stufe 1 (Assoziation)**: WarumAnalyse() — KausalGraph + Erfahrungs-Suche + LLM-Tiefenanalyse
+- **Stufe 2 (Intervention)**: SimuliereIntervention() — PrediktivesWeltModell vergleicht Aktion vs. Baseline (Warten), RankeInterventionen() bewertet alle 17 AktionsTypen
+- **Stufe 3 (Kontrafaktisch)**: KontrafaktischeAnalyse() — Rekonstruiert 20D-Zustand aus Erfahrung, simuliert alternative Aktion, LLM analysiert den Unterschied
+- **RegistriereBeobachtung()**: Geplante Aktionen werden als "mechanismus" (0.6 Konfidenz) eingetragen, ungeplante als "beobachtung" (0.3)
+- Datenstrukturen: KausaleEbene-Enum, KausaleAnalyse, KausaleHypothese, InterventionsErgebnis
+
+### Schritt 94: HypothesenEngine.cs — Aktive Hypothesenbildung + Experimentplanung
+Wissenschaftliches Vorgehen: Beobachte → Staune → Vermute → Teste → Lerne:
+- **Anomalie-Erkennung**: Ueberraschend gute/schlechte Ergebnisse, widersprüchliche Aktionsergebnisse, schwache Kausalketten
+- **Hypothesenbildung**: LLM generiert TESTBARE Hypothesen (Popper: falsifizierbar!) mit Vorhersage + Experiment-Design
+- **Automatische Pruefung**: Jede neue Erfahrung wird gegen offene Hypothesen getestet (Relevanz-Filter + Vorhersage-Matching)
+- **Bayesianisches Update**: Stuetzende Erfahrungen +0.1, widersprechende -0.15 auf Konfidenz
+- **Status-Uebergaenge**: Offen → InPruefung → Bestaetigt/Widerlegt/Unklar (nach >=3 Evidenzen)
+- **Integration**: Bestaetigte Hypothesen werden als kausale Kanten im KausalGraph registriert
+- **Persistenz**: hypothesen.json im Application.persistentDataPath
+
+### Schritt 95: AGIKern.cs — Schritt 16b KAUSALES REASONING + Schritt 16c HYPOTHESEN
+- KausalesReasoning.RegistriereBeobachtung() in Schritt 16b
+- HypothesenEngine.ZyklusTick() in Schritt 16c (prueft + bildet periodisch)
+- Felder, Initialisierung, Getter fuer beide Systeme
+- GetLetzterZustandsVektor() Getter fuer externe Interventions-Abfragen
+
+### Schritt 96: ChatUI.cs — /kausal + /hypothese Befehle
+- `/kausal status` — Zeigt Kanten, Beobachtungen, Ebenen-Verteilung
+- `/kausal warum <Wirkung>` — Startet WarumAnalyse (3-Ebenen-Kausal)
+- `/kausal intervention <Aktion>` — Simuliert Intervention mit PrediktivesWeltModell
+- `/hypothese status` — Zeigt Hypothesen-Uebersicht (Offen/Pruefung/Bestaetigt/Widerlegt)
+- `/hypothese generiere` — Erzwingt sofortige Hypothesenbildung
+- `/hypothese liste` — Listet alle Hypothesen mit Konfidenz und Evidenz
+
+**Verifikation Phase 22:** Agent beobachtet wiederholt: "Werfen" erzeugt mal +0.5 mal -0.3 Belohnung → Anomalie-Erkennung meldet Widerspruch → HypothesenEngine fragt LLM → Hypothese: "Werfen in Naehe von NPCs gibt negative Belohnung" → Agent wirft neben NPC → widersprechende Erfahrung → wirft ohne NPC → stuetzende Erfahrung → nach 3+ Evidenzen: Bestaetigt → wird als "mechanismus"-Kante im KausalGraph gespeichert. Parallel: `/kausal warum NPC rennt weg` liefert 3-Ebenen-Analyse.
+
+---
+
+## Phase 23: Kontinuierliches Lernen + Hierarchische Abstraktion + Catastrophic-Forgetting-Schutz
+
+### Schritt 97: EWCSchutz.cs — Elastic Weight Consolidation
+Schuetzt DQN-Gewichte vor Catastrophic Forgetting:
+- **Fisher Information Matrix**: Empirische FIM-Diagonale via Gradienten-Quadrate ueber Replay-Buffer (bis 200 Samples)
+- **Snapshot-System**: Nach jeder Task-Phase werden Gewichte θ* + Fisher F gespeichert (max 5 Snapshots, Online-EWC)
+- **EWC-Penalty**: Loss_gesamt = Loss_task + (λ/2) * Σ F_i * (θ_i − θ*_i)² — wichtige Gewichte werden vor Aenderung geschuetzt
+- **Lambda**: Standard 400, konfigurierbar via `SetzeLambda()`
+- **Integration in DQNLerner**: `BerechneSchichtPenalties()` wird bei jedem SGD-Update in `TrainiereBatch()` aufgerufen
+
+### Schritt 98: DQNLerner.cs — EWC-Integration
+- EWCSchutz-Feld + Initialisierung im Konstruktor
+- Backprop-Update geaendert: Jeder Gewichts-Gradient wird um EWC-Penalty korrigiert
+- `KonsolidiereWissen(phasenName)` — Erstellt EWC-Snapshot (manuell oder per Phasenwechsel)
+- `GetEWC()` — Zugriff auf EWC-Status
+
+### Schritt 99: KonzeptBaum.cs — Hierarchische Abstraktion
+Organisiert flache Konzepte in einer Baumstruktur:
+- **Bottom-Up Abstraktion**: Aehnliche Wurzelkonzepte → LLM findet Oberbegriff → neues Elternkonzept
+- **Top-Down Spaltung**: Konzepte mit >=15 Erfahrungen → LLM spaltet in 2–4 Unterkategorien
+- **Traversierung**: PfadNachOben(), AlleNachkommen(), GemeinsamerVorfahr(), SemantischeDistanz()
+- **Synchronisation**: Neue Konzepte aus KonzeptRevision werden automatisch als Wurzeln eingepflegt
+- **Periodische Reorganisation**: Alle 80 Zyklen prueft der Baum ob Gruppierung oder Spaltung sinnvoll
+- **Persistenz**: konzept_baum.json mit allen Knoten und Wurzeln
+- **Baumdarstellung**: `GetBaumText()` gibt ASCII-Baumstruktur zurueck
+
+### Schritt 100: KonzeptRevision.cs — Neue Getter
+- `GetAlleKonzepte()` — Gibt alle registrierten Konzepte zurueck (fuer Baum-Synchronisation)
+- `GetKonzept(konzeptId)` — Einzelnes Konzept nach ID abrufen
+
+### Schritt 101: TransferLerner.cs — Catastrophic-Forgetting-Schutz fuer Schemata
+- **Multi-Domain-Schutz**: Schemata die in >=2 Domaenen mit >=30% Erfolg laufen haben ein Mindest-Konfidenz-Floor (0.2)
+- **Mining-Schutz**: Neue Schemata mit existierendem Namen werden nicht ueberschrieben
+- Verhindert dass bewährte Cross-Domain-Schemata durch schlechte Einzelergebnisse geloescht werden
+
+### Schritt 102: AGIKern.cs — Phase 23 Integration
+- KonzeptBaum-Feld + Initialisierung
+- Schritt 16d KONZEPTBAUM: Periodische Reorganisation nach Hypothesen-Pruefung
+- Getter: `GetKonzeptBaum()`
+
+### Schritt 103: ChatUI.cs — /ewc + /konzeptbaum Befehle
+- `/ewc status` — Zeigt Snapshot-Anzahl, Lambda, Fisher-Statistik
+- `/ewc snapshot [name]` — Erstellt manuellen EWC-Snapshot
+- `/konzeptbaum status` — Knoten/Wurzeln/Tiefe/Blaetter
+- `/konzeptbaum baum` — ASCII-Baumstruktur anzeigen
+- `/konzeptbaum reorganisiere` — Erzwingt Reorganisation
+
+**Verifikation Phase 23:** (a) DQN lernt Navigations-Policy mit 500 Erfahrungen → `/ewc snapshot navigation` → lernt dann Sozial-Interaktion → Navigations-Gewichte bleiben erhalten (Fisher-gewichtet geschuetzt). (b) KonzeptBildung findet "Sackgassen", "Hindernisse", "Engpaesse" → KonzeptBaum gruppiert zu Oberbegriff "Blockaden" → `/konzeptbaum baum` zeigt Hierarchie. (c) Transfer-Schema "Greif-Prinzip" bewaehrt sich in physik+sozial → Multi-Domain-Schutz verhindert Abwertung bei sporadischem Fehlschlag in navigation.
+
+---
+
+## Phase 24: MetaZielSystem + Sensorisches Grounding
+
+### Schritt 104: MetaZielSystem.cs — Introspektionsgetriebene autonome Zielgenerierung
+Das System gibt sich SELBST Aufgaben basierend auf Introspektion aller Subsysteme:
+- **6 Zielquellen**: Kompetenzluecken (SelbstModell), Neugier-Hypothesen (NeugierSystem → endlich genutzt!), Offene Hypothesen (HypothesenEngine), Meta-Einsichten (MetaKognition: Stagnation, Blindflecken, ineffektive Strategien), Schwache Kausalketten (KausalGraph), Duenne Konzeptbereiche (KonzeptBaum)
+- **Kapazitaetsrespektierung**: Prueft freie Slots im ZielManager (max 3 aktive), generiert nur bei freier Kapazitaet
+- **Duplikat-Filterung**: Vergleicht neue Quellen mit bestehenden aktiven Zielen, vermeidet Doppelgenerierung
+- **Dringlichkeits-Ranking**: Quellen werden nach Dringlichkeit sortiert (0–1), MIN_DRINGLICHKEIT=0.3
+- **Statistik-Tracking**: Gesamtgeneriert/Erreicht/Gescheitert, Quellenverteilung, Erfolgsrate
+- **Intervall**: Alle 15 Zyklen, manuell erzwingbar via `ErzwingeGenerierung()`
+- **Persistenz**: meta_ziel_statistik.json
+
+### Schritt 105: GroundingBruecke.cs — Schliesst die Sensory-Language-Luecke
+Bidirektionaler Kreislauf zwischen Erfahrung und Sprache:
+- **Erfahrung → Wort**: Aus jeder Erfahrung Schluesselwoerter extrahieren, deren SensorDaten ins VAKOGLexikon schreiben (echtes Grounding statt LLM-Schaetzung)
+- **Wort → Erinnerung**: Bei Wort-Input geerdete sensorische Erinnerungen aktivieren (Cosine-Aehnlichkeit ueber VAKOG-Raum, Mindest-Aehnlichkeit 0.5)
+- **Grounding-Statistik**: Pro Wort: Erfahrungsanzahl, Grounding-Staerke (logarithmisch: 1x=0.16, 5x=0.60, 20x=1.0), letzte Erfahrungs-IDs
+- **Grounding-Rate**: Anteil erfahrungsgeerdeter Woerter vs. Lexikon-Gesamt — misst wie "echt" das Vokabular des Agenten ist
+- **Stoppwort-Filterung**: Funktionswoerter (der/die/das/the/a) werden nicht gegrounded
+- **Persistenz**: grounding_statistik.json, lexikon wird periodisch mitpersistiert
+
+### Schritt 106: AGIKern.cs — Phase 24 Integration
+- MetaZielSystem + GroundingBruecke: Felder, Initialisierung, Getter
+- Schritt 16e GROUNDING: Erfahrung → Wort-Bindung (nach KonzeptBaum, bei jeder Erfahrung)
+- Schritt 19 META-ZIEL-GENERIERUNG: Nach Neugier, autonome Zielgenerierung (alle 15 Zyklen)
+
+### Schritt 107: ChatUI.cs — /metaziel + /grounding Befehle
+- `/metaziel status` — Generiert/Erreicht/Gescheitert, aktive Slots, Intervall
+- `/metaziel generiere` — Erzwingt sofortige Zielgenerierung mit Quellenauswertung
+- `/metaziel quellen` — Zeigt letzte Zielquellen + Quellenverteilung
+- `/grounding status` — Geerdete Woerter, Updates, Grounding-Rate, Lexikon-Gesamt
+- `/grounding wort <X>` — Grounding-Staerke + Erfahrungsanzahl fuer ein bestimmtes Wort
+- `/grounding top` — Top 10 am staerksten geerdete Woerter
+
+**Verifikation Phase 24:** (a) Agent exploriert Welt → nach 50 Erfahrungen: `/grounding top` zeigt geerdete Woerter (z.B. "stein": Staerke=0.60, "wand": Staerke=0.45). (b) Kompetenz "navigation" sinkt unter 0.25 → `/metaziel generiere` erzeugt automatisch EXPLORATION-Ziel. (c) HypothesenEngine hat 3 offene Hypothesen → MetaZielSystem konvertiert Top-1 zu EXPERIMENT-Ziel. (d) `/grounding status` zeigt Grounding-Rate > 0% — Vokabular wird zunehmend erfahrungsgeerdet statt nur LLM-geschaetzt.
+
+---
+
+## Phase 25: Intuitive Physik + Mentale Simulation
+
+### Schritt 108: IntuitiverPhysikSimulator.cs — "Bauchgefuehl fuer Physik"
+Rein heuristisch + regelbasiert, ohne LLM:
+- **Objektpermanenz**: Verdeckte Objekte weiter tracken (Position extrapolieren mit Geschwindigkeit + Gravitation, Konfidenz sinkt ueber Zeit, Timeout nach 30s)
+- **Trajektorien**: Parabelwurf-Berechnung fuer fliegende Objekte (y0 + vy*t − 0.5g*t², Aufschlagpunkt + Flugzeit)
+- **Stabilitaet**: Analyse ob Objektstapel stabil sind (Unterstuetzungspruefung, Kippgefahr, Hoehen-Penalty)
+- **Containment**: Erkennt was in was drin ist (Container-Tags + raeumliche Naehe)
+- **Kollisionsvorhersage**: Paarweise Annaeherungs-Berechnung (relativer Geschwindigkeitsvektor, 5s Horizont)
+- **Validierung**: Vorhersagen koennen gegen tatsaechliche Positionen geprueft werden → Genauigkeits-Tracking
+- **Persistenz**: physik_sim_statistik.json
+
+### Schritt 109: MentaleSimulation.cs — "Theater im Kopf"
+Hypothetische Szenarien durchspielen ohne zu handeln:
+- **Was-Wenn-Analyse**: Einzelne Aktion simulieren → vorhergesagter Zustand + Belohnung via PrediktivesWeltModell
+- **Beste Sequenz finden**: Beam-Search (Top-5 Startaktionen × Greedy Rollout bis Tiefe 8), Konfidenz-Zerfall 0.85/Schritt, Abbruch bei <0.3
+- **Kontrafaktische Analyse**: "Was waere gewesen wenn..." — automatisch nach jeder Aktion: beste Alternative vs. tatsaechliche Wahl → Regret-Tracking
+- **Plan mental vorab testen**: Nimmt geplante Aktionssequenz, simuliert sie, bewertet ob vielversprechend
+- **Statistik**: Plan-Verbesserungen (wie oft hat Kontrafaktisch zu besserem Verstaendnis gefuehrt)
+- **Persistenz**: mentale_sim_statistik.json
+
+### Schritt 110: AGIKern.cs — Phase 25 Integration
+- PhysikSimulator + MentaleSimulation: Felder, Initialisierung, Getter
+- Schritt 0b PHYSIK-INTUITION: Vor Wahrnehmung — Objektpermanenz + Trajektorien + Stabilitaet aktualisieren
+- Schritt 15b+ MENTALE SIMULATION: Nach RL-Lernen — automatische kontrafaktische Analyse pro Aktion
+
+### Schritt 111: ChatUI.cs — /physiksim + /simulation Befehle
+- `/physiksim status` — Getrackte Objekte, Trajektorien, Vorhersage-Genauigkeit, Containments
+- `/physiksim wo <Objekt>` — Geschaetzte Position eines (evtl. verdeckten) Objekts
+- `/physiksim stabilitaet` — Aktuelle Stabilitaetsanalyse mit Risiken
+- `/simulation status` — Simulationen, Was-Wenn, Kontrafaktisch, Plan-Verbesserungen
+- `/simulation waswenn <Aktion>` — Simuliert einzelne Aktion
+- `/simulation beste` — Findet beste Aktionssequenz per Beam-Search
+- `/simulation kontrafaktisch` — Letzte 5 kontrafaktische Analysen
+
+**Verifikation Phase 25:** (a) Agent wirft Objekt → `/physiksim stabilitaet` erkennt Kippgefahr bei Stapel. (b) Objekt verschwindet hinter Wand → `WoIstObjekt("kiste")` gibt geschaetzte Position zurueck (Permanenz). (c) `/simulation waswenn Greifen` zeigt vorhergesagte Belohnung. (d) `/simulation beste` findet optimale Aktionssequenz. (e) `/simulation kontrafaktisch` zeigt: "Bewegen waere besser gewesen als Beobachten (Δ=+0.15)".
+
+---
+
+## Phase 26: Langzeit-Planung + Selbst-Curriculum
+
+### Schritt 112: LangzeitPlaner.cs — Hierarchische Langzeit-Planung
+Ergaenzt den flachen Planer um Meilenstein-basierte Zerlegung:
+- **Ziel-Zerlegung**: LLM zerlegt Ziel in 2-8 sequenzielle Meilensteine mit Erfolgsbedingungen
+- **Vorab-Simulation**: Jeder Meilenstein wird via MentaleSimulation mental durchgespielt — aussichtslose Plaene werden verworfen
+- **Meilensteine**: Pruefbare Zwischenziele mit Status (OFFEN/AKTIV/ABGESCHLOSSEN/GESCHEITERT/UEBERSPRUNGEN)
+- **Adaptive Umplanung**: Bei negativer Durchschnittsbelohnung, Timeout, oder Meta-Kognitions-Warnung → LLM entscheidet: umformulieren, ueberspringen, oder aufteilen (max 3 Umplanungen)
+- **Fortschritts-Tracking**: Alle 5 Zyklen Bewertung, Simulations-Genauigkeit vs. Realitaet
+- **Fallback**: Wenn LLM nicht zerlegen kann → 3 generische Meilensteine (Erkunden → Ausfuehren → Pruefen)
+- **Persistenz**: langzeit_planer.json
+
+### Schritt 113: SelbstCurriculum.cs — Selbstgesteuertes Lernen
+Das System identifiziert Schwachstellen und trainiert sich selbst:
+- **Schwachstellen-Analyse** (alle 20 Zyklen, 4 Quellen):
+  1. Kompetenz-Defizite (SelbstModell < 0.7)
+  2. Ineffektive Strategien + Blinde Flecken (MetaKognition)
+  3. Kontrafaktische Fehler-Haeufung (MentaleSimulation)
+  4. Lernstagnation → Strategie-Wechsel
+- **Zone der naechsten Entwicklung**: Uebungen nicht zu leicht (>0.2), nicht zu schwer (<0.7)
+- **Adaptive Schwierigkeit**: Erfolgsrate >70% → schwerer, <30% → leichter (±0.1 pro Schritt)
+- **Domaenen-Mapping**: 8 Domaenen × passende AktionsTypen (navigation→Bewegen/Drehen, physik→Werfen/Schieben/Ziehen, etc.)
+- **Abschluss**: Lernziel gilt als gelernt bei Kompetenz-Delta ≥ 0.15, max 30 Uebungen pro Ziel
+- **Integration**: Erzeugt Trainings-Ziele im ZielManager (niedrigere Prio als User-Ziele)
+- **Persistenz**: selbst_curriculum.json
+
+### Schritt 114: AGIKern.cs — Phase 26 Integration
+- LangzeitPlaner + SelbstCurriculum: Felder, Initialisierung, Getter
+- Schritt 11 PLANEN: Vor Detailplan → LangzeitPlaner versucht hierarchische Zerlegung
+- Schritt 16f LANGZEIT-PLANER: Nach Grounding — Fortschritt pruefen + Umplanung triggern
+- Schritt 16g SELBST-CURRICULUM: Uebung auswerten + neue Uebung generieren
+
+### Schritt 115: ChatUI.cs — /langzeitplan + /curriculum Befehle
+- `/langzeitplan status` — Aktiver Plan + Fortschritt + Meilensteine + Statistik
+- `/langzeitplan meilensteine` — Alle Meilensteine mit Status-Symbolen
+- `/langzeitplan historie` — Letzte 5 abgeschlossene/gescheiterte Plaene
+- `/curriculum status` — Aktives Lernziel + Uebungen + Kompetenz-Delta
+- `/curriculum ziele` — Alle Lernziele nach Prioritaet
+- `/curriculum statistik` — Uebungen, Erfolgsrate, Kompetenz-Zuwachs
+
+**Verifikation Phase 26:** (a) `/langzeitplan status` zeigt hierarchischen Plan mit Meilensteinen. (b) Agent beobachtet: Meilenstein-Fortschritt steigt. (c) Bei Stagnation: LLM formuliert Meilenstein um. (d) `/curriculum ziele` zeigt Schwachstellen-basierte Lernziele. (e) Adaptive Schwierigkeit: Erfolgreicher Agent bekommt schwerere Uebungen. (f) `/curriculum statistik` zeigt Kompetenz-Zuwachs ueber Zeit.
+
+---
+
+## Phase 27: Grounded Sprachproduktion + Erklaerbarkeit
+
+### Schritt 116: GroundedSprachproduktion.cs — Sprache aus Erfahrung statt nur Text
+Neues Sprachmodul, das Antworten mit erfahrungsgeerdeten Signalen anreichert:
+- **Antwort-Veredelung**: Nach der LLM-/Lokalantwort werden geerdete Woerter aus dem Input erkannt und als sensorischer Bezug in die Antwort integriert
+- **Weltbezug**: Wenn erwaehnte Objekte im Weltmodell existieren, werden Zustand + Position als situativer Kontext eingestreut
+- **Simulationsbezug**: Optionaler naechster plausibler Schritt aus MentaleSimulation fuer handlungsnahe Antworten
+- **Wort-Erklaerung**: Fuer ein Wort Grounding-Staerke + Beispiel-Erinnerung abrufbar
+- **Entscheidungs-Erklaerung**: Kombiniert MentaleSimulation + PhysikIntuition zu einer knappen "Warum"-Begruendung
+- **Persistenz**: grounded_sprachproduktion.json (Antworten veredelt, Erklaerungen, Durchschnitts-Grounding)
+
+### Schritt 117: AGIKern.cs — Phase 27 Integration
+- Neues Subsystem `GroundedSprachproduktion`: Feld, Initialisierung, Getter
+- Neuer Zyklus-Schritt **12c GROUNDED SPRACHE** nach Weltmanipulation:
+  - `antwort = groundedSprache.VeredleAntwort(input, antwort, zustandsVektor)`
+  - damit Ausgaben zunehmend erfahrungsnah und erklaerbar statt rein textuell
+
+### Schritt 118: ChatUI.cs — /sprache Befehle
+- `/sprache status` — Veredelte Antworten, Wort-/Entscheidungs-Erklaerungen, Ø Grounding-Staerke
+- `/sprache erklaere <Wort>` — Grounding-Staerke + erinnerungsbasiertes Beispiel fuer ein Wort
+- `/sprache warum` — Erklaert die aktuelle Handlungsneigung aus Simulation + Physikintuition
+
+### Schritt 119: Doku + Zyklusaktualisierung
+- README: Feature-Liste, Projektstruktur, Chat-Befehle, Zyklusschritt 12c erweitert
+- Verarbeitungszyklus zaehlt nun einen zusaetzlichen Sprach-Grounding-Schritt
+
+**Verifikation Phase 27:** (a) Bei geerdeten Woertern im Input enthaelt die Antwort einen sensorischen Bezug. (b) `/sprache erklaere stein` zeigt Grounding-Staerke + Beispiel-Erinnerung. (c) `/sprache warum` nennt simulierte naechste Aktion und ggf. Stabilitaetskontext. (d) `/sprache status` zeigt steigende Anzahl veredelter Antworten.
+
+---
+
+## Stabilitaets-Refactor (zwischen Phase 27 und 28)
+
+### Schritt 120: ZyklusStabilisator.cs — QoS gegen Latenzspitzen
+- Misst Zykluszeiten (Avg, EMA, Max) und erkennt Warn-/Hard-Last
+- Schaltet bei Lastspitzen auf sanfte Degradierung (teure Zusatzanalyse nur teilweise)
+- Kernlogik bleibt intakt, nur optionale Antwortveredelung wird reduziert
+- Persistenz: zyklus_stabilitaet.json
+
+### Schritt 121: AGIKern.cs + ChatUI.cs — Sichere Degradierung + Transparenz
+- AGIKern nutzt `ZyklusStabilisator` fuer QoS-Entscheidung in Schritt 12c
+- GroundedSprachproduktion wird fehlertolerant (try/catch, keine Zyklusunterbrechung)
+- Neuer Chat-Befehl `/perf status` zeigt aktuelle Zyklus-Stabilitaet
+
+**Verifikation Stabilitaets-Refactor:** (a) `/perf status` zeigt EMA/Avg/Max plausibel steigend/fallend. (b) Unter Last nimmt `Reduktionen` zu, aber Antworten bleiben vorhanden. (c) Keine Exceptions stoppen den Zyklus.
+
+---
+
+## Phase 28 (Start): Missionsgetriebene Langlauf-Autonomie
+
+### Schritt 122: AutonomieMissionen.cs — Session-Missionen
+- Fuehrt autonome Missions-Sessions ueber mehrere Zyklen
+- Wenn autonom und ohne aktive Ziele: kontrollierte Auto-Mission statt Leerlauf
+- Missionen tracken Schritte + Durchschnittsbelohnung + Abschluss/Stop
+- Curriculum kann Missionsfokus beeinflussen (Exploration vs. Lernfokus)
+- Persistenz: autonomie_missionen.json
+
+### Schritt 123: AGIKern.cs + ChatUI.cs — Integration Phase-28-Start
+- Neuer Zyklusschritt **19b AUTONOMIE-MISSIONEN** nach Meta-Zielgenerierung
+- Neue Befehle: `/mission status|an|aus|start <Text>|stop|historie`
+
+**Verifikation Phase 28 Start:** (a) `/mission status` zeigt aktive/letzte Mission. (b) Im autonomen Modus ohne aktive Ziele startet nach Intervall automatisch eine Mission. (c) `/mission historie` zeigt die letzten Sessions mit ØBelohnung.
+
+### Schritt 124: AutonomieMissionen.cs — Recovery + Missions-Empfehlungen
+- **Stagnations-Recovery**: Bei negativer Belohnungsserie wird eine laufende Mission sauber beendet und durch Recovery-/Lernmission ersetzt
+- **Empfehlungslogik**: `GetEmpfehlungText()` priorisiert Curriculum-Schwachstellen und schaltet bei schwacher letzter Performance auf Kalibrierungsmission
+- **Startauto-API**: `StarteEmpfohleneMission()` startet die aktuelle Empfehlung direkt
+- **Erweitertes Tracking**: Negative Serie + Recovery-Zaehler in Statistik
+
+### Schritt 125: ChatUI.cs — Missionssteuerung erweitert
+- Neue Befehle:
+  - `/mission empfehlung` — zeigt aktuell empfohlene Missionsrichtung
+  - `/mission startauto` — startet empfohlene Mission sofort
+- `/mission status` zeigt nun zusaetzlich negative Serie und Recovery-Kontext
+
+**Verifikation Phase 28 Ausbau:** (a) Bei laengerer negativer Belohnungsserie erscheint im Log eine Recovery-Meldung und neue Mission startet. (b) `/mission empfehlung` wechselt je nach Lernzielen/letzter Performance den Fokus. (c) `/mission startauto` erzeugt unmittelbar eine empfohlene Mission.
+
+### Schritt 126: ARC-2 Eval-Pipeline — Messbarkeit statt Schaetzung
+- Neues Modul `Arc2Evaluator.cs` mit Exakt-Match-Scoring pro Task
+- Dateneingang ueber `Data/arc2_tasks.json` oder `Data/arc2/*.json`
+- Persistenter Report `arc2_report_last.json` mit:
+  - Exakt-Quote
+  - JSON-Parse-Quote
+  - Durchschnittszeit
+  - LLM-Calls
+  - Copy-Baseline-Quote
+- ChatUI-Befehle: `/arc2 run [N]`, `/arc2 status`, `/arc2 report`
+
+**Verifikation ARC-2 Pipeline:** (a) Demo-Task in `arc2_tasks.json` liefert einen auswertbaren Report. (b) `/arc2 status` zeigt Kennzahlen. (c) `/arc2 report` listet letzte Task-Ergebnisse inklusive Parse/Exakt.
+
+### Schritt 127: Compile-Kompatibilitaetswelle (Schema-Harmonisierung)
+- Rueckwaertskompatible Alias-Felder/Properties in zentralen Modellen (PhysikRegel, PlausibilitaetsErgebnis, MentalesModell, BenchmarkErgebnis, Aktion/Plan, Konzept, VAKOG, Emotionen, LatenterZustand, SozialeAnalyse)
+- AGIConfig um fehlende Legacy-Parameter erweitert (`konzeptRevisionSchwelle`, `langzeit*`)
+- Callsite-Fixes: asynchrone VAKOG-Aufrufe, Semantik-Degradation-Signatur, constructor-order Fix in AGIKern
+- Runtime-Kompatibilitaet: LINQ-`TakeLast` Shim fuer Unity-Profile ohne native Implementierung
+- Unity-API-Korrektur: `Rigidbody.velocity` statt `linearVelocity`
+
+**Verifikation Schritt 127:** (a) Unity-Compilerfehler fuer fehlende Modellfelder/Signaturen fallen weg. (b) Legacy- und neue Module kompilieren gemeinsam. (c) `get_errors` bleibt gruen.
+
+---
+
 ## Abhängigkeiten
 
 ```
@@ -1437,10 +2016,13 @@ Kritischer Pfad: Phase 1 → 2 → 4 (Unity-Welt) → 5 (Physik) → 7 → 8 →
 - **Narratives Selbst**: Autobiographisches Gedächtnis mit Entwicklungsphasen
 - **Funktionale Kreativität (Punkt 5)**: Divergenz + Konvergenz, bewertet über Novelty/Utility/Plausibilität
 - **Subsymbolik (realisierbar)**: Latente Zustandsräume ergänzen symbolische Regeln, kein End-to-End-Training nötig
-- **Reinforcement Learning**: Tabular Q-Learning ohne LLM, lernt aus Belohnungssignal welche Aktionen in welchen Zustaenden funktionieren
+- **Reinforcement Learning**: Tabular Q-Learning ODER Deep Q-Network (DQN, reines C# MLP 20→64→32→17) — zuschaltbar via Config
 - **ML-Clustering**: K-Means++ fuer episodische Instanzen, Aehnlichkeitssuche ohne LLM
 - **Dezentrale Mikroagenten**: Aktivierungsbasiert, Blackboard-Kommunikation, emergentes Verhalten
 - **Meta-Kognition**: Strategie-Tracking, Lernkurven-Analyse, Bias-Erkennung, Pipeline-Empfehlungen
+- **Iteratives Reasoning**: Chain-of-Thought + Selbstkritik-Schleifen, konfigurierbare Iterationstiefe
+- **Prediktives Weltmodell**: Imagination-basierte Planung (MLP 37→64→32→21), evaluiert Aktionen vorab, zuschaltbar/deaktivierbar
+- **Arbeitsgedächtnis**: Strukturierter 11-Sektionen-Kontextbuffer, Token-Budget-bewusst, ersetzt manuellen String-Aufbau
 - **Langzeitlernen**: Priorisierung, kontrolliertes Vergessen, Driftmonitor für Dauerbetrieb
 - **Weltmodell-Konsistenz**: Automatische Fehlererkennung und sichere Reparatur
 - **Robustheit**: Degradationsmodi + Recovery statt Komplettausfall bei API-Störungen
@@ -1451,12 +2033,14 @@ Kritischer Pfad: Phase 1 → 2 → 4 (Unity-Welt) → 5 (Physik) → 7 → 8 →
 
 ## Geschätzte Größenordnung
 
-- ~79 C#-Scripts + 12 JSON-Datendateien + Config-ScriptableObject
-- ~18.500–25.000 Zeilen C#-Code
+- ~85 C#-Scripts + 12 JSON-Datendateien + Config-ScriptableObject
+- ~21.000–28.000 Zeilen C#-Code
 - ~3.500–6.000 Zeilen JSON-Daten
 - ~30–50 Prefabs
 - 1 Unity-Szene (HauptWelt)
 - 18-Schritte-Verarbeitungszyklus (erweitert: 8b/8c/8d/10b/15b/15c) + Autonomer Modus
 - 44 Qualitätskriterien
-- 15 Phasen, 65+ Schritte (inkl. 5b/5c/5d/14b/31b/35b/38b/53)
+- 17 Phasen, 75+ Schritte (inkl. 5b/5c/5d/14b/31b/35b/38b/53)
 - OpenAI-kompatibler API-Server (Port 8741)
+- DQN (reines C# MLP), Prediktives Weltmodell, Iteratives Reasoning, Arbeitsgedächtnis
+- Automatisiertes 6-Phasen-Kurrikulum-Training

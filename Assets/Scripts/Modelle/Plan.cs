@@ -6,8 +6,10 @@ namespace BilligAGI.Modelle
     [Serializable]
     public class Plan
     {
+        public string id;
         public string zielId;
         public List<Aktion> aktionen = new List<Aktion>();
+        public List<Aktion> schritte { get => aktionen; set => aktionen = value ?? new List<Aktion>(); }
         public int aktuellerSchritt;
         public int umplanungen;
         public List<string> anpassungen = new List<string>();
@@ -16,6 +18,7 @@ namespace BilligAGI.Modelle
 
         public Plan()
         {
+            id = Guid.NewGuid().ToString("N").Substring(0, 8);
             erstelltAm = DateTime.UtcNow.ToString("o");
         }
 

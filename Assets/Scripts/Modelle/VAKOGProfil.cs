@@ -9,6 +9,7 @@ namespace BilligAGI.Modelle
         public float visuell;
         public float auditiv;
         public float kinaesthetisch;
+        public float kinesthetisch { get => kinaesthetisch; set => kinaesthetisch = value; }
         public float olfaktorisch;
         public float gustatorisch;
         public string beschreibungV;

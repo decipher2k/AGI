@@ -2,12 +2,13 @@ using System;
 
 namespace BilligAGI.Modelle
 {
-    public enum LatentHerkunft { Sensorik, Text, Aktion, Konzept, Erfahrung }
+    public enum LatentHerkunft { Sensorik, Text, Aktion, Konzept, Erfahrung, ERFAHRUNG }
 
     [Serializable]
     public class LatenterZustand
     {
         public string kontextId;
+        public string id { get => kontextId; set => kontextId = value; }
         public string quellId { get => kontextId; set => kontextId = value; }
         public float[] embedding;
         public float[] vektor { get => embedding; set => embedding = value; }

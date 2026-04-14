@@ -15,9 +15,15 @@ namespace BilligAGI.Modelle
         public string letzteAktualisierung;
         public float konfidenz;
 
+        // Kompatibilitaets-Aliase
+        public string letzteBeobachtung { get; set; }
+        public float vertrauensLevel { get => konfidenz; set => konfidenz = value; }
+        public string zeitstempel { get => letzteAktualisierung; set => letzteAktualisierung = value; }
+
         public MentalesModell()
         {
             letzteAktualisierung = DateTime.UtcNow.ToString("o");
+            letzteBeobachtung = string.Empty;
         }
     }
 }

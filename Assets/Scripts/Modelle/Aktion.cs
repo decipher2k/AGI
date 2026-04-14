@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace BilligAGI.Modelle
 {
@@ -14,12 +15,38 @@ namespace BilligAGI.Modelle
     [Serializable]
     public class Aktion
     {
+        public string id;
         public string name;
         public AktionsTyp typ;
-        public Dictionary<string, string> parameter = new Dictionary<string, string>();
+        public string parameter = "";
+        public int reihenfolge;
         public string erwartetesErgebnis;
         public string tatsaechlichesErgebnis;
         public float geschaetzteDauer;
+
+        // Optionaler Kompatibilitaetszugriff fuer alte Dictionary-basierte Aufrufer.
+        public Dictionary<string, string> parameterMap
+        {
+            get
+            {
+                var map = new Dictionary<string, string>();
+                if (string.IsNullOrWhiteSpace(parameter))
+                    return map;
+                map["raw"] = parameter;
+                return map;
+            }
+            set
+            {
+                if (value == null || value.Count == 0)
+                {
+                    parameter = "";
+                    return;
+                }
+                parameter = value.ContainsKey("raw")
+                    ? value["raw"]
+                    : string.Join(",", value.Select(kv => $"{kv.Key}={kv.Value}"));
+            }
+        }
     }
 
     [Serializable]

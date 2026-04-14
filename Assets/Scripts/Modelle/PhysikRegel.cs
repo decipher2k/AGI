@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace BilligAGI.Modelle
 {
@@ -12,6 +13,12 @@ namespace BilligAGI.Modelle
         public string quelle; // "experiment", "llm", "beobachtung"
         public int anzahlBestaetigungen;
         public string zeitstempel;
+        public List<string> tags = new List<string>();
+
+        // Kompatibilitaets-Aliase fuer aeltere Aufrufer
+        public string beschreibung { get => wenn; set => wenn = value; }
+        public string ergebnis { get => dann; set => dann = value; }
+        public int bestaetigungen { get => anzahlBestaetigungen; set => anzahlBestaetigungen = value; }
 
         public PhysikRegel()
         {
@@ -28,6 +35,11 @@ namespace BilligAGI.Modelle
         public bool bestaetigt;
         public SensorDaten sensorDaten;
         public PhysikRegel extrahierteRegel;
+        public string zeitstempel;
+
+        // Kompatibilitaet: vorher/nachher Snapshot-Pattern
+        public SensorDaten sensorDatenVorher;
+        public SensorDaten sensorDatenNachher;
     }
 
     [Serializable]
@@ -39,5 +51,14 @@ namespace BilligAGI.Modelle
         public string begruendung;
         public string quelle; // "regel", "llm", "experiment"
         public bool experimentVorgeschlagen;
+
+        // Kompatibilitaets-Aliase
+        public string erklaerung { get => begruendung; set => begruendung = value; }
+        public string basierung { get => quelle; set => quelle = value; }
+        public string experimentVorschlag
+        {
+            get => experimentVorgeschlagen ? "Experiment vorgeschlagen" : string.Empty;
+            set => experimentVorgeschlagen = !string.IsNullOrWhiteSpace(value);
+        }
     }
 }

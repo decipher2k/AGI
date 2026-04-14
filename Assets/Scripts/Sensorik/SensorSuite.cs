@@ -131,7 +131,7 @@ namespace BilligAGI.Sensorik
             // Kinaesthetisch
             var rb = GetComponent<Rigidbody>();
             if (rb != null)
-                daten.geschwindigkeit = rb.linearVelocity.magnitude;
+                daten.geschwindigkeit = rb.velocity.magnitude;
 
             // Audio (vereinfacht — AudioListener Basis)
             daten.audioPegel = 0f; // Wird in Integration mit AudioListener erweitert
