@@ -32,6 +32,15 @@ namespace BilligAGI.Welt
             navAgent = GetComponent<NavMeshAgent>();
             rb = GetComponent<Rigidbody>();
 
+            // NavMeshAgent steuert die Position direkt — Rigidbody darf keine eigene
+            // Gravitation anwenden, sonst akkumuliert sich die Velocity und der Agent
+            // tunnelt durch den Boden.
+            if (navAgent != null && rb != null)
+            {
+                rb.isKinematic = true;
+                rb.useGravity = false;
+            }
+
             if (sensorSuite == null)
                 sensorSuite = GetComponent<Sensorik.SensorSuite>();
         }

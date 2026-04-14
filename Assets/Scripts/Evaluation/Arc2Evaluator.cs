@@ -176,7 +176,17 @@ namespace BilligAGI.Evaluation
                 string prompt = BauePrompt(task);
                 string system = "Du loest ARC-2 Rasteraufgaben. Gib AUSSCHLIESSLICH ein JSON 2D-Array mit Zahlen 0-9 zurueck.";
 
-                string antwort = await kern.VerarbeiteAnfrageAsync(prompt, system);
+                var llm = kern.GetLLM();
+                if (llm == null)
+                {
+                    result.fehler = "LLM nicht verfuegbar";
+                    result.jsonParsebar = false;
+                    result.exaktRichtig = false;
+                    return result;
+                }
+
+                var llmAntwort = await llm.FreieAnfrage(prompt, system);
+                string antwort = llmAntwort?.text;
                 int[][] vorhersage = ParseGridAusAntwort(antwort);
                 int[][] ziel = task.test[0].output;
 
@@ -227,47 +237,97 @@ namespace BilligAGI.Evaluation
             string normalized = text.Trim();
             normalized = normalized.Replace("```json", "").Replace("```", "").Trim();
 
-            string block = ExtrahiereJsonArrayBlock(normalized);
-            if (string.IsNullOrWhiteSpace(block)) return null;
+            // 1) Fast path: gesamte Antwort ist bereits das Grid.
+            if (TryParseGrid(normalized, out var fullGrid))
+                return fullGrid;
 
-            try
+            // 2) Fallback: Bei Antworten mit mehreren Arrays (z.B. Erklaerung + Beispiele)
+            // den letzten gueltigen 2D-Grid-Block verwenden.
+            var bloecke = ExtrahiereJsonArrayBloecke(normalized);
+            for (int i = bloecke.Count - 1; i >= 0; i--)
             {
-                var token = JToken.Parse(block);
-                if (token is not JArray outer) return null;
-
-                var rows = new List<int[]>();
-                foreach (var rowToken in outer)
-                {
-                    if (rowToken is not JArray rowArr) return null;
-                    var row = rowArr.Select(v => v.Value<int>()).ToArray();
-                    rows.Add(row);
-                }
-
-                return rows.ToArray();
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private static string ExtrahiereJsonArrayBlock(string text)
-        {
-            int start = text.IndexOf('[');
-            if (start < 0) return null;
-
-            int depth = 0;
-            for (int i = start; i < text.Length; i++)
-            {
-                char c = text[i];
-                if (c == '[') depth++;
-                else if (c == ']') depth--;
-
-                if (depth == 0)
-                    return text.Substring(start, i - start + 1);
+                if (TryParseGrid(bloecke[i], out var kandidat))
+                    return kandidat;
             }
 
             return null;
+        }
+
+        private static bool TryParseGrid(string text, out int[][] grid)
+        {
+            grid = null;
+            if (string.IsNullOrWhiteSpace(text)) return false;
+
+            try
+            {
+                var token = JToken.Parse(text);
+                if (token is not JArray outer || outer.Count == 0) return false;
+
+                var rows = new List<int[]>();
+                int breite = -1;
+
+                foreach (var rowToken in outer)
+                {
+                    if (rowToken is not JArray rowArr || rowArr.Count == 0) return false;
+
+                    var row = new int[rowArr.Count];
+                    for (int i = 0; i < rowArr.Count; i++)
+                    {
+                        if (rowArr[i] == null || rowArr[i].Type != JTokenType.Integer)
+                            return false;
+
+                        int value = rowArr[i].Value<int>();
+                        if (value < 0 || value > 9)
+                            return false;
+                        row[i] = value;
+                    }
+
+                    if (breite < 0) breite = row.Length;
+                    if (row.Length != breite) return false;
+
+                    rows.Add(row);
+                }
+
+                grid = rows.ToArray();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static List<string> ExtrahiereJsonArrayBloecke(string text)
+        {
+            var result = new List<string>();
+            if (string.IsNullOrWhiteSpace(text)) return result;
+
+            int start = -1;
+            int depth = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (c == '[')
+                {
+                    if (depth == 0)
+                        start = i;
+                    depth++;
+                }
+                else if (c == ']')
+                {
+                    if (depth == 0)
+                        continue;
+
+                    depth--;
+                    if (depth == 0 && start >= 0)
+                    {
+                        result.Add(text.Substring(start, i - start + 1));
+                        start = -1;
+                    }
+                }
+            }
+
+            return result;
         }
 
         private static bool GridsIdentisch(int[][] a, int[][] b)

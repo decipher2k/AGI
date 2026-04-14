@@ -1,0 +1,67 @@
+{
+  "aktiverPlan": {
+    "id": "0007ddac",
+    "zielId": "2bbf3784-7996-435a-8380-baa642f2e4d2",
+    "beschreibung": "Alle sichtbaren Objekte identifizieren und beschreiben",
+    "meilensteine": [
+      {
+        "nummer": 1,
+        "beschreibung": "Umgebung fuer 'Alle sichtbaren Objekte identifizieren und beschreiben' erkunden",
+        "erfolgsBedingung": null,
+        "typ": 0,
+        "geschaetzteDauer": 10.0,
+        "fortschritt": 0.0,
+        "status": 0,
+        "simulierteBelohnung": 0.0,
+        "tatsaechlicheBelohnung": 0.0,
+        "startZyklus": 0,
+        "abschlussZyklus": 0
+      },
+      {
+        "nummer": 2,
+        "beschreibung": "'Alle sichtbaren Objekte identifizieren und beschreiben' ausfuehren",
+        "erfolgsBedingung": null,
+        "typ": 0,
+        "geschaetzteDauer": 15.0,
+        "fortschritt": 0.0,
+        "status": 0,
+        "simulierteBelohnung": 0.0,
+        "tatsaechlicheBelohnung": 0.0,
+        "startZyklus": 0,
+        "abschlussZyklus": 0
+      },
+      {
+        "nummer": 3,
+        "beschreibung": "Ergebnis ueberpruefen und festigen",
+        "erfolgsBedingung": null,
+        "typ": 3,
+        "geschaetzteDauer": 5.0,
+        "fortschritt": 0.0,
+        "status": 0,
+        "simulierteBelohnung": 0.0,
+        "tatsaechlicheBelohnung": 0.0,
+        "startZyklus": 0,
+        "abschlussZyklus": 0
+      }
+    ],
+    "aktuellerMeilenstein": 0,
+    "gesamtFortschritt": 0.0,
+    "erwarteteBelohnung": 0.0,
+    "simulationsKonfidenz": 1.0,
+    "umplanungen": 0,
+    "erstelltInZyklus": 0,
+    "erstelltAm": "2026-04-14T18:41:38.5415235Z",
+    "status": 0
+  },
+  "historie": [],
+  "statistik": {
+    "plaeneErstellt": 11,
+    "plaeneAbgeschlossen": 0,
+    "plaeneGescheitert": 0,
+    "gesamtUmplanungen": 0,
+    "meilensteineErreicht": 0,
+    "meilensteineGescheitert": 0,
+    "durchschnittlicheGenauigkeit": 0.0,
+    "vorabSimulationenGespart": 0
+  }
+}

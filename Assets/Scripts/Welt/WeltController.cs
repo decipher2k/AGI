@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using BilligAGI.Modelle;
 
 namespace BilligAGI.Welt
@@ -103,6 +104,43 @@ namespace BilligAGI.Welt
                     return p;
             }
             return null;
+        }
+
+        public int RegistriereSzeneObjekte(Transform root = null, bool clearVorher = false)
+        {
+            if (weltModell == null || weltModell.zustand == null)
+                return 0;
+
+            if (clearVorher)
+                weltModell.zustand.objekte.Clear();
+
+            int count = 0;
+            Transform[] transforms = root != null
+                ? root.GetComponentsInChildren<Transform>(true)
+                : Object.FindObjectsByType<Transform>(FindObjectsSortMode.None);
+
+            foreach (var t in transforms)
+            {
+                if (t == null) continue;
+                var go = t.gameObject;
+
+                if (!go.activeInHierarchy) continue;
+                if (go.GetComponent<Canvas>() != null) continue;
+                if (go.GetComponent<EventSystem>() != null) continue;
+
+                bool istWeltrelevant = go.GetComponent<Renderer>() != null
+                    || go.GetComponent<Collider>() != null
+                    || go.GetComponent<Rigidbody>() != null
+                    || go.GetComponent<Light>() != null;
+
+                if (!istWeltrelevant) continue;
+
+                weltModell.RegistriereObjekt(go);
+                count++;
+            }
+
+            weltModell.AktualisiereRelationen();
+            return count;
         }
     }
 }

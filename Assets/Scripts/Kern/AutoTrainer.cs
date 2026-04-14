@@ -73,6 +73,15 @@ namespace BilligAGI.Kern
         private void Update()
         {
             if (!trainingAktiv || !agiKern.IstBereit()) return;
+
+            if (wartet)
+            {
+                if (agiKern.IstBeschaeftigt())
+                    return;
+
+                wartet = false;
+            }
+
             if (statistik.zyklenGesamt >= maxZyklenProSitzung)
             {
                 if (trainingAktiv)
@@ -139,6 +148,7 @@ namespace BilligAGI.Kern
 
             // 3. Input an AGI senden
             agiKern.VerarbeiteInput(input);
+            wartet = true;
 
             if (detailLog)
                 Debug.Log($"[AutoTrainer] [{kurrikulum.AktuellePhase}] → \"{TruncateLog(input, 80)}\"");
@@ -343,6 +353,7 @@ namespace BilligAGI.Kern
                 startZeit = DateTime.UtcNow.ToString("o")
             };
             letztesZielId = null;
+            wartet = false;
             Debug.Log("[AutoTrainer] Training zurueckgesetzt.");
         }
 

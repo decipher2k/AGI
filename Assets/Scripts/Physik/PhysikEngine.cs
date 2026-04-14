@@ -12,7 +12,7 @@ namespace BilligAGI.Physik
         private readonly LLMAdapter llm;
         private readonly AGIConfig config;
         private Dictionary<string, PhysikRegel> gelernteRegeln;
-        private string regelPfad = "kausal_graph.json";
+        private string regelPfad = "physik_regeln.json";
 
         public PhysikEngine(LLMAdapter llm, AGIConfig config)
         {
@@ -152,9 +152,17 @@ namespace BilligAGI.Physik
 
         private void LadeRegeln()
         {
-            var daten = DatenLader.Lade<Dictionary<string, PhysikRegel>>(regelPfad);
-            if (daten != null)
-                gelernteRegeln = daten;
+            try
+            {
+                var daten = DatenLader.Lade<Dictionary<string, PhysikRegel>>(regelPfad);
+                if (daten != null)
+                    gelernteRegeln = daten;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[PhysikEngine] Konnte Regeln nicht laden ({regelPfad}): {ex.Message}. Starte mit leerem Regelset.");
+                gelernteRegeln = new Dictionary<string, PhysikRegel>();
+            }
         }
 
         private void PersistiereRegeln()

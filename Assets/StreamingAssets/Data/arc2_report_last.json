@@ -1,0 +1,20 @@
+{
+  "zeitstempel": "2026-04-14T18:41:24.9877014Z",
+  "anzahlTasks": 1,
+  "ausgewertet": 1,
+  "exaktRichtig": 1,
+  "exaktQuote": 1.0,
+  "jsonParseQuote": 1.0,
+  "durchschnittMs": 2976,
+  "llmCallsGesamt": 2,
+  "baselineCopyQuote": 1.0,
+  "ergebnisse": [
+    {
+      "taskId": "demo_copy_2x2",
+      "exaktRichtig": true,
+      "jsonParsebar": true,
+      "dauerMs": 2976,
+      "fehler": null
+    }
+  ]
+}

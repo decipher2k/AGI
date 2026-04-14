@@ -1962,6 +1962,13 @@ Neues Sprachmodul, das Antworten mit erfahrungsgeerdeten Signalen anreichert:
 
 **Verifikation Schritt 127:** (a) Unity-Compilerfehler fuer fehlende Modellfelder/Signaturen fallen weg. (b) Legacy- und neue Module kompilieren gemeinsam. (c) `get_errors` bleibt gruen.
 
+### Schritt 128: LINQ-Ambiguitaet bereinigt (TakeLast)
+- Ursache: Zusaetzlicher lokaler `TakeLast`-Shim kollidierte mit nativer `System.Linq.Enumerable.TakeLast`-Implementierung.
+- Wirkung: CS0121 in mehreren Dateien (`ArchetypenEngine`, `MetaKognition`, `MikroAgent`, `AutonomieMissionen`, `ChatUI`).
+- Fix: Kompatibilitaets-Datei `LinqCompatExtensions.cs` entfernt; native LINQ-Implementierung bleibt alleiniger Resolver.
+
+**Verifikation Schritt 128:** (a) Keine CS0121-Ambiguitaetsfehler mehr. (b) Folgefehler mit "method group" verschwinden mit. (c) Compiler-Check wieder gruen.
+
 ---
 
 ## Abhängigkeiten

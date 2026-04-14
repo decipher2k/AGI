@@ -1,0 +1,17 @@
+[
+  {
+    "id": "2bbf3784-7996-435a-8380-baa642f2e4d2",
+    "name": null,
+    "beschreibung": "Alle sichtbaren Objekte identifizieren und beschreiben",
+    "prioritaet": 0.5,
+    "effektivePrioritaet": 0.0,
+    "typ": 0,
+    "status": 1,
+    "teilziele": [],
+    "erfolgsbedingung": null,
+    "ergebnis": null,
+    "zeitstempel": "2026-04-14T18:00:28.4079966Z",
+    "erstelltAm": "2026-04-14T18:00:28.4079966Z",
+    "deadline": -1.0
+  }
+]

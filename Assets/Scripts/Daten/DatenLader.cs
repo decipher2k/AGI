@@ -20,8 +20,16 @@ namespace BilligAGI.Daten
                 Debug.LogWarning($"[DatenLader] Datei nicht gefunden: {pfad} — erzeuge Default.");
                 return new T();
             }
-            string json = File.ReadAllText(pfad);
-            return JsonConvert.DeserializeObject<T>(json) ?? new T();
+            try
+            {
+                string json = File.ReadAllText(pfad);
+                return JsonConvert.DeserializeObject<T>(json) ?? new T();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[DatenLader] Konnte JSON nicht laden ({pfad}): {ex.Message}. Verwende Default-Wert.");
+                return new T();
+            }
         }
 
         public static void Speichere<T>(string dateiName, T daten)

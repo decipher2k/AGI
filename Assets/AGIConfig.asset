@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3be58513f3418d748b012b001d297658, type: 3}
+  m_Name: AGIConfig
+  m_EditorClassIdentifier: 
+  llmAnbieter: 1
+  llmApiKey: sad
+  llmModel: llama3.1:8b
+  llmApiUrl: http://localhost:11434/v1/chat/completions
+  maxTokensProAnfrage: 4096
+  vektorDbUrl: http://localhost:8000
+  vektorDbTyp: chroma
+  physikKonfidenzSchwelle: 0.7
+  sozialKonfidenzSchwelle: 0.6
+  autonomerModus: 0
+  zyklusIntervall: 2
+  autonomModusTickRate: 2
+  maxAutonomeSchritte: 100
+  vakogSchwellwerte: 0.3
+  konzeptRevisionNachNAnwendungen: 10
+  konzeptRevisionSchwelle: 10
+  konzeptRevisionMaxPasses: 7
+  konzeptDriftSchwelle: 0.3
+  maxRueckpropagationsTiefe: 3
+  emotionsDecayRate: 0.05
+  emotionsSchwelle: 0.3
+  emotionsBaseline: 0.2
+  oneShotSchwelle: 0.8
+  autobiographieKapitelLaenge: 20
+  tomMaxEntitaeten: 10
+  llmFallbackModusAktiv: 1
+  llmUnabhaengigkeitsZielquote: 0.6
+  subsymbolikAktiv: 1
+  subsymbolikDim: 128
+  kreativitaetNoveltySchwelle: 0.65
+  kreativitaetUtilitySchwelle: 0.55
+  kreativitaetABTestAktiv: 1
+  kreativitaetMaxVarianten: 5
+  forgettingRate: 0.01
+  langzeitMaxErfahrungen: 5000
+  langzeitDriftSchwelle: 0.15
+  langzeitStabilisierungsSchwelle: 5
+  konsistenzPruefIntervall: 10
+  apiRecoveryMaxSekunden: 120
+  maxAutonomeSchritteProSitzung: 500
+  notbremseAktiv: 1
+  iterativesReasoningAktiv: 1
+  reasoningIterationen: 3
+  dqnStattTabular: 1
+  weltModellAktiv: 0
+  arbeitsGedaechtnisAktiv: 1
+  arbeitsGedaechtnisMaxInteraktionen: 10
+  arbeitsGedaechtnisTokenBudget: 3000
+  fineTuningAktiv: 0
+  fineTuningApiUrl: 
+  fineTuningEpochen: 3
+  fineTuningLernrate: 1
+  minErfahrungenFuerFineTuning: 500
+  fineTuningIntervallZyklen: 1000
+  evaluierungsZyklen: 50
+  transferMiningIntervall: 100
+  transferMiningSampleGroesse: 50

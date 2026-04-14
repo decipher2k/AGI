@@ -125,6 +125,10 @@ namespace BilligAGI.Kern
         private string letzteAntwort;
         private bool apiVerarbeitung;
         private string apiSystemPrompt;
+        private bool zyklusLaeuft;
+
+        /// <summary>Wird gefeuert wenn der AGI-Zyklus eine Antwort generiert hat.</summary>
+        public event System.Action<string> OnAntwort;
 
         private async void Start()
         {
@@ -174,6 +178,29 @@ namespace BilligAGI.Kern
             planer = new Planer(llm, zeitModell, analogie);
             weltModell = new WeltModell();
             weltModell.LadeVonDisk();
+
+            if (weltController != null)
+            {
+                weltController.weltModell = weltModell;
+                if (weltController.wetterSystem == null)
+                    weltController.wetterSystem = wetterSystem;
+                if (weltController.directionalLight == null)
+                    weltController.directionalLight = RenderSettings.sun;
+            }
+
+            if ((weltModell?.zustand?.objekte?.Count ?? 0) == 0 && weltGenerator != null)
+            {
+                // Initiale Welt nur dann erzeugen, wenn noch nichts im Weltmodell vorhanden ist.
+                weltGenerator.ErstelleSzenario("garten");
+            }
+
+            if (weltController != null)
+            {
+                int registriert = weltController.RegistriereSzeneObjekte();
+                if (registriert > 0)
+                    Debug.Log($"[AGIKern] Initiale Weltbefuellung: {registriert} Objekte registriert.");
+            }
+
             ausfuehrer = new Ausfuehrer(aktionsController, weltModell);
             monitor = new Monitor(weltModell, emotionen);
 
@@ -271,7 +298,7 @@ namespace BilligAGI.Kern
 
         private void Update()
         {
-            if (!initialisiert || apiVerarbeitung) return;
+            if (!initialisiert || apiVerarbeitung || zyklusLaeuft) return;
             if (Time.time - letzterTick < config.zyklusIntervall) return;
             letzterTick = Time.time;
 
@@ -285,12 +312,19 @@ namespace BilligAGI.Kern
 
         private async Task Zyklus()
         {
-            float zyklusStart = Time.realtimeSinceStartup;
-            zeitModell.Tick();
-            string input = pendingInput;
-            string systemKontext = apiSystemPrompt;
-            pendingInput = null;
-            apiSystemPrompt = null;
+            if (zyklusLaeuft)
+                return;
+
+            zyklusLaeuft = true;
+
+            try
+            {
+                float zyklusStart = Time.realtimeSinceStartup;
+                zeitModell.Tick();
+                string input = pendingInput;
+                string systemKontext = apiSystemPrompt;
+                pendingInput = null;
+                apiSystemPrompt = null;
 
             // ==== 0b. PHYSIK-INTUITION ====
             SensorDaten sensorDaten = sensorSuite != null ? sensorSuite.AktualisiereSensoren() : null;
@@ -731,10 +765,18 @@ namespace BilligAGI.Kern
             // Antwort speichern + an UI senden
             letzteAntwort = antwort;
             if (!string.IsNullOrEmpty(antwort))
+            {
                 Debug.Log($"[AGI] {antwort}");
+                OnAntwort?.Invoke(antwort);
+            }
 
-            float zyklusMs = (Time.realtimeSinceStartup - zyklusStart) * 1000f;
-            zyklusStabilisator?.RegistriereZyklus(zyklusMs);
+                float zyklusMs = (Time.realtimeSinceStartup - zyklusStart) * 1000f;
+                zyklusStabilisator?.RegistriereZyklus(zyklusMs);
+            }
+            finally
+            {
+                zyklusLaeuft = false;
+            }
         }
 
         // Oeffentliche API
@@ -780,6 +822,8 @@ namespace BilligAGI.Kern
         public AutonomieMissionen GetAutonomieMissionen() => autonomieMissionen;
         public Arc2Evaluator GetArc2Evaluator() => arc2Evaluator;
         public float[] GetLetzterZustandsVektor() => letzterZustandsVektor;
+
+        public bool IstBeschaeftigt() => apiVerarbeitung || zyklusLaeuft || !string.IsNullOrWhiteSpace(pendingInput);
 
         // ==== API-Server Schnittstelle ====
         public bool IstBereit() => initialisiert && !apiVerarbeitung;

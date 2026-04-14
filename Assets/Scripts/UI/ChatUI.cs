@@ -24,12 +24,153 @@ namespace BilligAGI.UI
 
         private void Start()
         {
-            if (sendenButton != null)
-                sendenButton.onClick.AddListener(Senden);
-            if (inputField != null)
-                inputField.onEndEdit.AddListener(OnEndEdit);
+            // Auto-discover from inspector-wired or existing child hierarchy
+            if (inputField == null) inputField = GetComponentInChildren<InputField>(true);
+            if (scrollRect == null) scrollRect = GetComponentInChildren<ScrollRect>(true);
+            if (sendenButton == null) sendenButton = GetComponentInChildren<Button>(true);
+            if (chatText == null && scrollRect?.content != null)
+                chatText = scrollRect.content.GetComponentInChildren<Text>(true);
+
+            // If still missing, build the entire UI programmatically
+            if (GetComponent<RectTransform>() != null)
+                EnsureUIElemente();
+
+            // Ensure scroll content auto-resizes with text
+            if (scrollRect?.content != null)
+            {
+                var fitter = scrollRect.content.GetComponent<ContentSizeFitter>();
+                if (fitter == null)
+                {
+                    fitter = scrollRect.content.gameObject.AddComponent<ContentSizeFitter>();
+                    fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                }
+            }
+
+            if (sendenButton != null) sendenButton.onClick.AddListener(Senden);
+            if (inputField != null) inputField.onEndEdit.AddListener(OnEndEdit);
+            if (agiKern != null) agiKern.OnAntwort += OnAGIAntwort;
 
             ZeigeNachricht("[System] Billig-AGI Chat bereit. Tippe /hilfe fuer Befehle.");
+        }
+
+        private void EnsureUIElemente()
+        {
+            // Panel background
+            if (GetComponent<Image>() == null)
+                gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.45f);
+
+            // ScrollView
+            if (scrollRect == null)
+            {
+                var scrollGo = UIKind("ScrollView");
+                AnchorRect(scrollGo, new Vector2(0.02f, 0.2f), new Vector2(0.98f, 0.98f));
+                scrollGo.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.2f);
+                scrollRect = scrollGo.AddComponent<ScrollRect>();
+                scrollRect.horizontal = false;
+
+                var viewport = UIKind("Viewport", scrollGo);
+                AnchorRect(viewport, Vector2.zero, Vector2.one);
+                viewport.AddComponent<Image>().color = Color.clear;
+                viewport.AddComponent<Mask>().showMaskGraphic = false;
+
+                var content = UIKind("Content", viewport);
+                var contentRT = content.GetComponent<RectTransform>();
+                contentRT.anchorMin = new Vector2(0f, 1f);
+                contentRT.anchorMax = new Vector2(1f, 1f);
+                contentRT.pivot   = new Vector2(0.5f, 1f);
+                contentRT.sizeDelta = new Vector2(0f, 0f);
+
+                chatText = content.AddComponent<Text>();
+                chatText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                chatText.fontSize = 16;
+                chatText.supportRichText = true;
+                chatText.alignment = TextAnchor.UpperLeft;
+                chatText.horizontalOverflow = HorizontalWrapMode.Wrap;
+                chatText.verticalOverflow   = VerticalWrapMode.Overflow;
+                chatText.color = Color.white;
+
+                var fitter = content.AddComponent<ContentSizeFitter>();
+                fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+                scrollRect.viewport = viewport.GetComponent<RectTransform>();
+                scrollRect.content  = contentRT;
+            }
+
+            // InputField
+            if (inputField == null)
+            {
+                var inputGo = UIKind("InputField");
+                AnchorRect(inputGo, new Vector2(0.02f, 0.02f), new Vector2(0.78f, 0.18f));
+                inputGo.AddComponent<Image>().color = new Color(1f, 1f, 1f, 0.15f);
+                inputField = inputGo.AddComponent<InputField>();
+
+                var textGo = UIKind("Text", inputGo);
+                AnchorRect(textGo, Vector2.zero, Vector2.one, new Vector2(8f, 4f), new Vector2(-8f, -4f));
+                var inputText = textGo.AddComponent<Text>();
+                inputText.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                inputText.fontSize  = 16;
+                inputText.color     = Color.white;
+                inputText.alignment = TextAnchor.MiddleLeft;
+                inputText.supportRichText = false;
+
+                var phGo = UIKind("Placeholder", inputGo);
+                AnchorRect(phGo, Vector2.zero, Vector2.one, new Vector2(8f, 4f), new Vector2(-8f, -4f));
+                var ph = phGo.AddComponent<Text>();
+                ph.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                ph.fontSize  = 16;
+                ph.color     = new Color(1f, 1f, 1f, 0.4f);
+                ph.fontStyle = FontStyle.Italic;
+                ph.text      = "Nachricht oder /befehl...";
+                ph.alignment = TextAnchor.MiddleLeft;
+
+                inputField.textComponent = inputText;
+                inputField.placeholder   = ph;
+            }
+
+            // Send button
+            if (sendenButton == null)
+            {
+                var btnGo = UIKind("SendenButton");
+                AnchorRect(btnGo, new Vector2(0.8f, 0.02f), new Vector2(0.98f, 0.18f));
+                btnGo.AddComponent<Image>().color = new Color(0.15f, 0.45f, 0.8f, 0.85f);
+                sendenButton = btnGo.AddComponent<Button>();
+
+                var lblGo = UIKind("Text", btnGo);
+                AnchorRect(lblGo, Vector2.zero, Vector2.one);
+                var lbl = lblGo.AddComponent<Text>();
+                lbl.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                lbl.text      = "Senden";
+                lbl.fontSize  = 16;
+                lbl.color     = Color.white;
+                lbl.alignment = TextAnchor.MiddleCenter;
+            }
+        }
+
+        private GameObject UIKind(string name, GameObject parent = null)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent != null ? parent.transform : transform, false);
+            return go;
+        }
+
+        private static void AnchorRect(GameObject go, Vector2 min, Vector2 max,
+            Vector2 offsetMin = default, Vector2 offsetMax = default)
+        {
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = min;
+            rt.anchorMax = max;
+            rt.offsetMin = offsetMin;
+            rt.offsetMax = offsetMax;
+        }
+
+        private void OnDestroy()
+        {
+            if (agiKern != null) agiKern.OnAntwort -= OnAGIAntwort;
+        }
+
+        private void OnAGIAntwort(string antwort)
+        {
+            ZeigeNachricht($"[AGI] {antwort}");
         }
 
         private void OnEndEdit(string text)
@@ -958,9 +1099,12 @@ namespace BilligAGI.UI
                 chatText.text = string.Join("\n", chatVerlauf);
             }
 
-            // Auto-Scroll
+            // Auto-Scroll to bottom
             if (scrollRect != null)
+            {
                 Canvas.ForceUpdateCanvases();
+                scrollRect.verticalNormalizedPosition = 0f;
+            }
         }
     }
 }

@@ -22,6 +22,11 @@ namespace BilligAGI.Welt
         // Use MonoBehaviour to avoid hard compile-time dependency on Unity.AI.Navigation package.
         public MonoBehaviour navMeshSurface;
 
+        [Header("Hierarchie")]
+        public Transform worldParent;
+
+        private Transform ZielParent => worldParent != null ? worldParent : transform;
+
         public void GeneriereWelt(Modelle.WeltBeschreibung beschreibung)
         {
             Debug.Log($"[WeltGenerator] Generiere Welt: {beschreibung.name} ({beschreibung.biom})");
@@ -132,6 +137,7 @@ namespace BilligAGI.Welt
                 renderer.material = terrainMaterial;
             terrainObj.AddComponent<MeshCollider>().sharedMesh = mesh;
             terrainObj.layer = LayerMask.NameToLayer("Default");
+            terrainObj.transform.SetParent(ZielParent, true);
         }
 
         private void VerteilePrefabs(GameObject[] prefabs, int anzahl, int breite, int tiefe)
@@ -148,11 +154,11 @@ namespace BilligAGI.Welt
 
                 if (Physics.Raycast(new Vector3(x, 100f, z), Vector3.down, out RaycastHit hit, 200f))
                 {
-                    Instantiate(prefab, hit.point, Quaternion.Euler(0, Random.Range(0, 360f), 0));
+                    Instantiate(prefab, hit.point, Quaternion.Euler(0, Random.Range(0, 360f), 0), ZielParent);
                 }
                 else
                 {
-                    Instantiate(prefab, new Vector3(x, 0, z), Quaternion.Euler(0, Random.Range(0, 360f), 0));
+                    Instantiate(prefab, new Vector3(x, 0, z), Quaternion.Euler(0, Random.Range(0, 360f), 0), ZielParent);
                 }
             }
         }
@@ -164,6 +170,7 @@ namespace BilligAGI.Welt
             boden.name = "Boden";
             boden.transform.localScale = new Vector3(breite, 0.1f, tiefe);
             boden.transform.position = new Vector3(0, 0, 0);
+            boden.transform.SetParent(ZielParent, true);
 
             // Waende
             ErstelleWand("Wand_Nord", new Vector3(0, hoehe / 2, tiefe / 2), new Vector3(breite, hoehe, 0.1f));
@@ -179,6 +186,7 @@ namespace BilligAGI.Welt
             wand.transform.position = position;
             wand.transform.localScale = scale;
             wand.isStatic = true;
+            wand.transform.SetParent(ZielParent, true);
         }
 
         private void TryBuildNavMesh()
