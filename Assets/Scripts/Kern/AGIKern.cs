@@ -511,10 +511,14 @@ namespace BilligAGI.Kern
             bb.Schreibe("global_workspace_fokus", globalWorkspace?.AktuellerFokus?.inhalt);
 
             // ==== 11. PLANEN ====
+            bool hatUnbeantworteteAnfrage = HatUnbeantworteteAnfrage(input);
             if (aktuellesZiel != null && aktuellerPlan == null)
             {
-                // Phase 26: Langzeit-Planer versucht hierarchische Zerlegung
-                if (langzeitPlaner != null && !langzeitPlaner.HatAktivenPlan())
+                // Phase 26: Langzeit-Planer versucht hierarchische Zerlegung.
+                // Langzeitplanung darf nicht vor einer noch unbeantworteten Nutzer-/API-
+                // Anfrage starten, weil die Zerlegung selbst LLM-Zeit verbraucht und
+                // sichtbare Antworten dadurch blockieren kann.
+                if (!hatUnbeantworteteAnfrage && langzeitPlaner != null && !langzeitPlaner.HatAktivenPlan())
                 {
                     var lzPlan = await langzeitPlaner.ErstelleLangzeitPlan(
                         aktuellesZiel, weltModell.zustand, zustandsVektor);
@@ -522,8 +526,13 @@ namespace BilligAGI.Kern
                         Debug.Log($"[AGI] Langzeit-Plan: {lzPlan.meilensteine.Count} Meilensteine");
                 }
 
-                aktuellerPlan = await planer.ErstellePlan(aktuellesZiel, weltModell.zustand);
-                aktuellerPlanSchritt = 0;
+                // Kurzfristige Detailplanung fuer autonome Schritte wird ebenfalls
+                // zurueckgestellt, solange eine direkte Antwort aussteht.
+                if (!hatUnbeantworteteAnfrage)
+                {
+                    aktuellerPlan = await planer.ErstellePlan(aktuellesZiel, weltModell.zustand);
+                    aktuellerPlanSchritt = 0;
+                }
             }
 
             // ==== 12. NACHDENKEN ====
@@ -861,6 +870,14 @@ namespace BilligAGI.Kern
             {
                 zyklusLaeuft = false;
             }
+        }
+
+
+        private bool HatUnbeantworteteAnfrage(string aktuellerInput)
+        {
+            return !string.IsNullOrWhiteSpace(aktuellerInput) ||
+                apiVerarbeitung ||
+                HatWartendeApiAnfragen();
         }
 
 
