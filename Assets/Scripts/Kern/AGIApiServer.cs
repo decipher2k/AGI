@@ -23,6 +23,8 @@ namespace BilligAGI.Kern
         [Header("Server")]
         public int port = 8741;
         public bool autoStart = true;
+        [Tooltip("Maximale Wartezeit, bevor der HTTP-Client eine JSON-Fehlerantwort statt einer leeren/abgebrochenen Verbindung bekommt.")]
+        public float requestTimeoutSekunden = 25f;
 
         [Header("Referenzen")]
         public AGIKern agiKern;
@@ -41,7 +43,25 @@ namespace BilligAGI.Kern
             public string systemPrompt;
             public string model;
             public bool stream;
+            public string completionId;
+            public long created;
+            public bool streamingGestartet;
             public TaskCompletionSource<bool> fertig;
+            public int mainThreadGestartet;
+            private int antwortReserviert;
+
+            public bool ReserviereAntwort()
+            {
+                return Interlocked.Exchange(ref antwortReserviert, 1) == 0;
+            }
+        }
+
+        private class ChatRequest
+        {
+            public string prompt;
+            public string systemPrompt;
+            public string model;
+            public bool stream;
         }
 
         private void Start()
@@ -62,6 +82,12 @@ namespace BilligAGI.Kern
             // Pro Frame eine Anfrage verarbeiten (Main-Thread fuer Unity-APIs)
             if (warteschlange.TryDequeue(out var item))
             {
+                if (Interlocked.CompareExchange(ref item.mainThreadGestartet, 1, 0) != 0)
+                {
+                    item.fertig.TrySetResult(true);
+                    return;
+                }
+
                 _ = VerarbeiteAufMainThread(item);
             }
         }
@@ -229,49 +255,16 @@ namespace BilligAGI.Kern
                 return;
             }
 
-            // OpenAI-kompatibler Stream-Modus: die AGI erzeugt intern weiterhin
-            // eine vollstaendige Antwort und liefert sie danach als SSE-Delta-Chunks aus.
-            bool stream = requestObj["stream"]?.Value<bool>() ?? false;
-
-            // Messages extrahieren
-            var messages = requestObj["messages"] as JArray;
-            if (messages == null || messages.Count == 0)
+            ChatRequest request;
+            try
             {
-                SendeFehler(ctx, 400, "invalid_request", "messages-Array fehlt oder leer");
+                request = ExtrahiereChatRequest(requestObj);
+            }
+            catch (ArgumentException ex)
+            {
+                SendeFehler(ctx, 400, "invalid_request", ex.Message);
                 return;
             }
-
-            string systemPrompt = null;
-            var userParts = new StringBuilder();
-
-            foreach (var msg in messages)
-            {
-                string role = msg["role"]?.ToString() ?? "";
-                string content = msg["content"]?.ToString() ?? "";
-
-                if (role == "system")
-                    systemPrompt = content;
-                else if (role == "user")
-                {
-                    if (userParts.Length > 0) userParts.AppendLine();
-                    userParts.Append(content);
-                }
-                else if (role == "assistant")
-                {
-                    // Konversationsverlauf: vorherige Antwort als Kontext mitgeben
-                    if (userParts.Length > 0) userParts.AppendLine();
-                    userParts.Append($"[Vorherige Antwort: {content}]");
-                }
-            }
-
-            string prompt = userParts.ToString();
-            if (string.IsNullOrWhiteSpace(prompt))
-            {
-                SendeFehler(ctx, 400, "invalid_request", "Kein User-Content in messages");
-                return;
-            }
-
-            string model = requestObj["model"]?.ToString() ?? "billig-agi";
 
             // AGI ist noch nicht initialisiert? Beschaeftigte Zyklen sind kein
             // Ablehnungsgrund: Die Anfrage wird angenommen und mit Vorrang vor
@@ -284,19 +277,38 @@ namespace BilligAGI.Kern
 
             // Anfrage in Queue fuer Main-Thread einreihen
             var tcs = new TaskCompletionSource<bool>();
-            agiKern.RegistriereWartendeApiAnfrage();
-            warteschlange.Enqueue(new AnfrageItem
+            var item = new AnfrageItem
             {
                 context = ctx,
-                prompt = prompt,
-                systemPrompt = systemPrompt,
-                model = model,
-                stream = stream,
+                prompt = request.prompt,
+                systemPrompt = request.systemPrompt,
+                model = request.model,
+                stream = request.stream,
+                completionId = $"chatcmpl-agi-{Guid.NewGuid():N}",
+                created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 fertig = tcs
-            });
+            };
 
-            // Blockierend auf Main-Thread-Verarbeitung warten (Listener-Thread bleibt hier stehen)
-            tcs.Task.Wait();
+            agiKern.RegistriereWartendeApiAnfrage();
+            warteschlange.Enqueue(item);
+
+            if (item.stream)
+                item.streamingGestartet = SendeStreamingStart(item.context, item.completionId, item.created, item.model);
+
+            // Blockierend warten, aber nur begrenzt: ohne Timeout schliessen viele
+            // Clients die Verbindung selbst und melden dann "empty response from server".
+            var timeout = TimeSpan.FromSeconds(Mathf.Max(1f, requestTimeoutSekunden));
+            if (!tcs.Task.Wait(timeout))
+            {
+                bool nochNichtGestartet = Interlocked.CompareExchange(ref item.mainThreadGestartet, 2, 0) == 0;
+                if (nochNichtGestartet)
+                    agiKern.EntferneWartendeApiAnfrage();
+
+                string message = nochNichtGestartet
+                    ? "API-Anfrage wartete zu lange auf den Unity-Main-Thread."
+                    : "API-Verarbeitung dauerte zu lange; pruefe LLM-Server, Autonomie-/Training-Last oder erhoehe requestTimeoutSekunden.";
+                SendeFehlerEinmal(item, 504, "request_timeout", message);
+            }
         }
 
         // ===== Main-Thread Verarbeitung =====
@@ -319,16 +331,17 @@ namespace BilligAGI.Kern
                 int promptTokens = item.prompt.Length / 4;
                 int completionTokens = (antwort?.Length ?? 0) / 4;
 
-                string completionId = $"chatcmpl-agi-{Guid.NewGuid():N}";
-                long created = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                string completionId = item.completionId;
+                long created = item.created;
                 string model = string.IsNullOrWhiteSpace(item.model) ? "billig-agi" : item.model;
                 string modus = agiKern.GetModus();
                 float llmKosten = agiKern.GetLLM()?.GesamtKosten ?? 0f;
 
                 if (item.stream)
                 {
-                    SendeStreamingAntwort(item.context, completionId, created, model, antwort ?? "",
-                        promptTokens, completionTokens, dauerMs, modus, llmKosten);
+                    if (item.ReserviereAntwort())
+                        SendeStreamingAntwort(item.context, completionId, created, model, antwort ?? "",
+                            promptTokens, completionTokens, dauerMs, modus, llmKosten, !item.streamingGestartet);
                     Debug.Log($"[AGIApi] Streaming-Antwort gesendet ({dauerMs:F0}ms, ~{promptTokens + completionTokens} tokens)");
                     return;
                 }
@@ -368,13 +381,14 @@ namespace BilligAGI.Kern
                     }
                 };
 
-                SendeJsonAntwort(item.context, 200, response.ToString());
+                if (item.ReserviereAntwort())
+                    SendeJsonAntwort(item.context, 200, response.ToString());
                 Debug.Log($"[AGIApi] Antwort gesendet ({dauerMs:F0}ms, ~{promptTokens + completionTokens} tokens)");
             }
             catch (Exception ex)
             {
                 Debug.LogError($"[AGIApi] Verarbeitungsfehler: {ex.Message}");
-                SendeFehler(item.context, 500, "processing_error", ex.Message);
+                SendeFehlerEinmal(item, 500, "processing_error", ex.Message);
             }
             finally
             {
@@ -407,6 +421,24 @@ namespace BilligAGI.Kern
                 var roleChunk = NeuerStreamChunk(completionId, created, model,
                     new JObject { ["role"] = "assistant" }, null);
                 SendeSseData(ctx, roleChunk.ToString(Formatting.None));
+                SendeSseKommentar(ctx, "billig-agi request accepted");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[AGIApi] Konnte Streaming-Antwort nicht starten: {ex.Message}");
+                return false;
+            }
+        }
+
+        private static void SendeStreamingAntwort(HttpListenerContext ctx, string completionId, long created,
+            string model, string antwort, int promptTokens, int completionTokens, float dauerMs,
+            string modus, float llmKosten, bool includeRoleChunk = true)
+        {
+            try
+            {
+                if (includeRoleChunk)
+                    SendeStreamingStart(ctx, completionId, created, model);
 
                 foreach (string teil in TeileTextInStreamChunks(antwort))
                 {
@@ -493,9 +525,47 @@ namespace BilligAGI.Kern
             }
         }
 
+        private static void SendeStreamingFehler(HttpListenerContext ctx, string completionId, long created,
+            string model, string errorType, string message)
+        {
+            try
+            {
+                var errorText = $"[FEHLER] {errorType}: {message}";
+                foreach (string teil in TeileTextInStreamChunks(errorText))
+                {
+                    var contentChunk = NeuerStreamChunk(completionId, created, model,
+                        new JObject { ["content"] = teil }, null);
+                    SendeSseData(ctx, contentChunk.ToString(Formatting.None));
+                }
+
+                var finishChunk = NeuerStreamChunk(completionId, created, model, new JObject(), "stop");
+                finishChunk["x_agi_metadata"] = new JObject
+                {
+                    ["error"] = errorType,
+                    ["message"] = message
+                };
+                SendeSseData(ctx, finishChunk.ToString(Formatting.None));
+                SendeSseData(ctx, "[DONE]");
+                ctx.Response.OutputStream.Close();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[AGIApi] Konnte Streaming-Fehler nicht senden: {ex.Message}");
+                try { ctx.Response.OutputStream.Close(); }
+                catch { }
+            }
+        }
+
         private static void SendeSseData(HttpListenerContext ctx, string data)
         {
             byte[] buffer = Encoding.UTF8.GetBytes($"data: {data}\n\n");
+            ctx.Response.OutputStream.Write(buffer, 0, buffer.Length);
+            ctx.Response.OutputStream.Flush();
+        }
+
+        private static void SendeSseKommentar(HttpListenerContext ctx, string kommentar)
+        {
+            byte[] buffer = Encoding.UTF8.GetBytes($": {kommentar}\n\n");
             ctx.Response.OutputStream.Write(buffer, 0, buffer.Length);
             ctx.Response.OutputStream.Flush();
         }
@@ -511,7 +581,10 @@ namespace BilligAGI.Kern
                 ctx.Response.OutputStream.Write(buffer, 0, buffer.Length);
                 ctx.Response.OutputStream.Close();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[AGIApi] Konnte JSON-Antwort nicht senden: {ex.Message}");
+            }
         }
 
         private static void SendeFehler(HttpListenerContext ctx, int statusCode,
