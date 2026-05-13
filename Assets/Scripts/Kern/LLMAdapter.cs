@@ -32,7 +32,10 @@ namespace BilligAGI.Kern
         public LLMAdapter(AGIConfig config)
         {
             this.config = config;
-            httpClient = new HttpClient();
+            httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(Mathf.Max(1f, config.llmRequestTimeoutSekunden))
+            };
 
             if (config.llmAnbieter == LLMAnbieter.Anthropic)
             {

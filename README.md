@@ -346,6 +346,11 @@ Der eingebaute API-Server erlaubt externen Tools (Benchmarks, andere LLM-Clients
 3. Port konfigurieren (Default: 8741)
 4. Play drücken → Server startet automatisch
 
+**Timeouts:**
+- `AGIConfig.apiRequestTimeoutSekunden` steuert, wie lange `/v1/chat/completions` maximal auf den kompletten AGI-Zyklus wartet (Default: 300s).
+- `AGIConfig.llmRequestTimeoutSekunden` steuert den HTTP-Timeout eines einzelnen LLM-Aufrufs (Default: 180s).
+- Wenn weiterhin `[FEHLER] request_timeout` erscheint: lokalen LLM-Server auf Last/Cold-Start pruefen, Autonomie-/Training-Last pausieren oder `apiRequestTimeoutSekunden` weiter erhoehen.
+
 **ARC-Benchmark:**
 ```
 Base URL: http://localhost:8741/v1
@@ -400,6 +405,8 @@ Alle zuschaltbar/deaktivierbar über `AGIConfig`:
 
 | Feature | Config-Feld | Default | Beschreibung |
 |---|---|---|---|
+| API Request Timeout | `apiRequestTimeoutSekunden` | 300s | Maximale Wartezeit des OpenAI-kompatiblen API-Servers pro Chat-Completion |
+| LLM Request Timeout | `llmRequestTimeoutSekunden` | 180s | HTTP-Timeout pro einzelner LLM-Anfrage |
 | Iteratives Reasoning | `iterativesReasoningAktiv` | true | CoT + Selbstkritik-Schleifen |
 | Reasoning-Tiefe | `reasoningIterationen` | 3 | Anzahl Selbstkritik-Durchläufe (2–5) |
 | DQN statt Tabular | `dqnStattTabular` | true | Neuronales Netz statt Q-Tabelle |
