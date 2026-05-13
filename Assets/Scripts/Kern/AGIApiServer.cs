@@ -293,7 +293,10 @@ namespace BilligAGI.Kern
             warteschlange.Enqueue(item);
 
             if (item.stream)
-                item.streamingGestartet = SendeStreamingStart(item.context, item.completionId, item.created, item.model);
+            {
+                string streamModel = string.IsNullOrWhiteSpace(item.model) ? "billig-agi" : item.model;
+                item.streamingGestartet = SendeStreamingStart(item.context, item.completionId, item.created, streamModel);
+            }
 
             // Blockierend warten, aber nur begrenzt: ohne Timeout schliessen viele
             // Clients die Verbindung selbst und melden dann "empty response from server".
@@ -406,9 +409,90 @@ namespace BilligAGI.Kern
                 : antwort;
         }
 
-        private static void SendeStreamingAntwort(HttpListenerContext ctx, string completionId, long created,
-            string model, string antwort, int promptTokens, int completionTokens, float dauerMs,
-            string modus, float llmKosten)
+        private static ChatRequest ExtrahiereChatRequest(JObject requestObj)
+        {
+            string model = requestObj.Value<string>("model");
+            bool stream = requestObj.Value<bool?>("stream") ?? false;
+            var messages = requestObj["messages"] as JArray;
+            if (messages == null || messages.Count == 0)
+                throw new ArgumentException("messages muss ein nicht-leeres Array sein.");
+
+            var systemBuilder = new StringBuilder();
+            var promptBuilder = new StringBuilder();
+
+            foreach (var token in messages)
+            {
+                var message = token as JObject;
+                if (message == null) continue;
+
+                string role = message.Value<string>("role") ?? "user";
+                string content = ExtrahiereMessageContent(message["content"]);
+                if (string.IsNullOrWhiteSpace(content)) continue;
+
+                if (role == "system" || role == "developer")
+                {
+                    if (systemBuilder.Length > 0) systemBuilder.AppendLine();
+                    systemBuilder.AppendLine(content);
+                }
+                else
+                {
+                    if (promptBuilder.Length > 0) promptBuilder.AppendLine();
+                    promptBuilder.Append(role).Append(": ").AppendLine(content);
+                }
+            }
+
+            string prompt = promptBuilder.ToString().Trim();
+            if (string.IsNullOrWhiteSpace(prompt))
+                throw new ArgumentException("Keine nutzbare User-/Assistant-Nachricht in messages gefunden.");
+
+            return new ChatRequest
+            {
+                prompt = prompt,
+                systemPrompt = systemBuilder.ToString().Trim(),
+                model = string.IsNullOrWhiteSpace(model) ? "billig-agi" : model,
+                stream = stream
+            };
+        }
+
+        private static string ExtrahiereMessageContent(JToken contentToken)
+        {
+            if (contentToken == null || contentToken.Type == JTokenType.Null)
+                return string.Empty;
+
+            if (contentToken.Type == JTokenType.String)
+                return contentToken.Value<string>() ?? string.Empty;
+
+            if (contentToken is JArray parts)
+            {
+                var sb = new StringBuilder();
+                foreach (var partToken in parts)
+                {
+                    if (partToken is JObject part)
+                    {
+                        string type = part.Value<string>("type");
+                        if (type == "text")
+                        {
+                            string text = part.Value<string>("text");
+                            if (!string.IsNullOrWhiteSpace(text))
+                            {
+                                if (sb.Length > 0) sb.AppendLine();
+                                sb.Append(text);
+                            }
+                        }
+                    }
+                    else if (partToken.Type == JTokenType.String)
+                    {
+                        if (sb.Length > 0) sb.AppendLine();
+                        sb.Append(partToken.Value<string>());
+                    }
+                }
+                return sb.ToString();
+            }
+
+            return contentToken.ToString(Formatting.None);
+        }
+
+        private static bool SendeStreamingStart(HttpListenerContext ctx, string completionId, long created, string model)
         {
             try
             {
@@ -437,8 +521,8 @@ namespace BilligAGI.Kern
         {
             try
             {
-                if (includeRoleChunk)
-                    SendeStreamingStart(ctx, completionId, created, model);
+                if (includeRoleChunk && !SendeStreamingStart(ctx, completionId, created, model))
+                    return;
 
                 foreach (string teil in TeileTextInStreamChunks(antwort))
                 {
@@ -523,6 +607,21 @@ namespace BilligAGI.Kern
                 yield return text.Substring(start, ende - start);
                 start = ende;
             }
+        }
+
+        private static void SendeFehlerEinmal(AnfrageItem item, int statusCode, string errorType, string message)
+        {
+            if (item == null || !item.ReserviereAntwort())
+                return;
+
+            string model = string.IsNullOrWhiteSpace(item.model) ? "billig-agi" : item.model;
+            if (item.stream && item.streamingGestartet)
+            {
+                SendeStreamingFehler(item.context, item.completionId, item.created, model, errorType, message);
+                return;
+            }
+
+            SendeFehler(item.context, statusCode, errorType, message);
         }
 
         private static void SendeStreamingFehler(HttpListenerContext ctx, string completionId, long created,
