@@ -202,6 +202,24 @@ namespace BilligAGI.Kern
                     }
 
                     string responseJson = await response.Content.ReadAsStringAsync();
+                    if (string.IsNullOrWhiteSpace(responseJson))
+                    {
+                        Debug.LogWarning("[LLMAdapter] Leere HTTP-Antwort vom LLM-Server.");
+                        if (versuch < maxRetries)
+                        {
+                            int wartezeit = (int)Math.Pow(2, versuch) * 1000;
+                            await Task.Delay(wartezeit);
+                            continue;
+                        }
+
+                        fehlgeschlageneAnfragen++;
+                        return new LLMAntwort
+                        {
+                            text = "[FEHLER] Leere Antwort vom LLM-Server",
+                            ausFallback = false
+                        };
+                    }
+
                     var responseObj = JObject.Parse(responseJson);
 
                     string antwortText;
@@ -209,15 +227,33 @@ namespace BilligAGI.Kern
 
                     if (config.llmAnbieter == LLMAnbieter.Anthropic)
                     {
-                        antwortText = responseObj["content"]?[0]?["text"]?.ToString() ?? "";
+                        antwortText = ExtrahiereText(responseObj["content"]);
                         inputTokens = responseObj["usage"]?["input_tokens"]?.Value<int>() ?? 0;
                         outputTokens = responseObj["usage"]?["output_tokens"]?.Value<int>() ?? 0;
                     }
                     else
                     {
-                        antwortText = responseObj["choices"]?[0]?["message"]?["content"]?.ToString() ?? "";
+                        antwortText = ExtrahiereOpenAIText(responseObj);
                         inputTokens = responseObj["usage"]?["prompt_tokens"]?.Value<int>() ?? 0;
                         outputTokens = responseObj["usage"]?["completion_tokens"]?.Value<int>() ?? 0;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(antwortText))
+                    {
+                        Debug.LogWarning($"[LLMAdapter] LLM-Server lieferte keinen Antworttext: {responseJson}");
+                        if (versuch < maxRetries)
+                        {
+                            int wartezeit = (int)Math.Pow(2, versuch) * 1000;
+                            await Task.Delay(wartezeit);
+                            continue;
+                        }
+
+                        fehlgeschlageneAnfragen++;
+                        return new LLMAntwort
+                        {
+                            text = "[FEHLER] LLM-Server lieferte keinen Antworttext",
+                            ausFallback = false
+                        };
                     }
 
                     int totalTokens = inputTokens + outputTokens;
@@ -259,6 +295,61 @@ namespace BilligAGI.Kern
                 text = "[FEHLER] Alle Versuche fehlgeschlagen",
                 ausFallback = false
             };
+        }
+
+
+        private static string ExtrahiereOpenAIText(JObject responseObj)
+        {
+            var choice = responseObj["choices"]?[0];
+            string content = ExtrahiereText(choice?["message"]?["content"]);
+            if (!string.IsNullOrWhiteSpace(content))
+                return content;
+
+            content = ExtrahiereText(choice?["delta"]?["content"]);
+            if (!string.IsNullOrWhiteSpace(content))
+                return content;
+
+            content = choice?["text"]?.ToString();
+            if (!string.IsNullOrWhiteSpace(content))
+                return content;
+
+            return ExtrahiereText(responseObj["message"]?["content"]);
+        }
+
+        private static string ExtrahiereText(JToken token)
+        {
+            if (token == null || token.Type == JTokenType.Null)
+                return "";
+
+            if (token.Type == JTokenType.String)
+                return token.ToString();
+
+            if (token.Type == JTokenType.Array)
+            {
+                var sb = new StringBuilder();
+                foreach (var part in token.Children())
+                {
+                    string teil = ExtrahiereText(part);
+                    if (string.IsNullOrEmpty(teil))
+                        continue;
+                    if (sb.Length > 0) sb.AppendLine();
+                    sb.Append(teil);
+                }
+                return sb.ToString();
+            }
+
+            if (token.Type == JTokenType.Object)
+            {
+                string text = token["text"]?.ToString();
+                if (!string.IsNullOrWhiteSpace(text))
+                    return text;
+
+                text = token["content"]?.ToString();
+                if (!string.IsNullOrWhiteSpace(text))
+                    return text;
+            }
+
+            return token.ToString();
         }
 
         private string BaueAnthropicBody(string prompt, string systemPrompt)

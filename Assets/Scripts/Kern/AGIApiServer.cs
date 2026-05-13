@@ -312,6 +312,7 @@ namespace BilligAGI.Kern
 
                 // AGI-Zyklus durchlaufen
                 string antwort = await agiKern.VerarbeiteAnfrageAsync(item.prompt, item.systemPrompt);
+                antwort = NormalisiereAntworttext(antwort);
                 float dauerMs = (float)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
                 // Token-Schaetzung (grob: 4 Zeichen pro Token)
@@ -383,6 +384,13 @@ namespace BilligAGI.Kern
 
         // ===== Hilfsmethoden =====
 
+
+        private static string NormalisiereAntworttext(string antwort)
+        {
+            return string.IsNullOrWhiteSpace(antwort)
+                ? "Ich konnte gerade keine Antwort generieren. Bitte versuche es erneut oder pruefe die LLM-Server-Konfiguration."
+                : antwort;
+        }
 
         private static void SendeStreamingAntwort(HttpListenerContext ctx, string completionId, long created,
             string model, string antwort, int promptTokens, int completionTokens, float dauerMs,
