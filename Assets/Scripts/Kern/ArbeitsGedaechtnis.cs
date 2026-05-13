@@ -154,7 +154,8 @@ namespace BilligAGI.Kern
             string basisSystem,
             List<Erfahrung> relevanteErinnerungen = null,
             List<Analogie> analogien = null,
-            PlausibilitaetsErgebnis physikCheck = null)
+            PlausibilitaetsErgebnis physikCheck = null,
+            List<WissensDokument> externesWissen = null)
         {
             var sb = new StringBuilder();
 
@@ -194,7 +195,16 @@ namespace BilligAGI.Kern
                     sb.AppendLine($"- {b}");
             }
 
-            // 8. Relevante Erinnerungen
+            // 8. Externes Wissen (klar getrennt von eigener Erfahrung)
+            if (externesWissen != null && externesWissen.Count > 0)
+            {
+                sb.AppendLine("\n[Externes Wissen / Wikipedia]");
+                sb.AppendLine("Nutze diese Auszuege nur als externe Quelle; nicht als eigene Erfahrung ausgeben.");
+                foreach (var w in externesWissen.Take(maxErinnerungen))
+                    sb.AppendLine($"- {w.titel} ({w.url}): {Kuerze(w.text, 220)}");
+            }
+
+            // 9. Relevante Erinnerungen
             if (relevanteErinnerungen != null && relevanteErinnerungen.Count > 0)
             {
                 sb.AppendLine("\n[Relevante Erinnerungen]");
@@ -202,7 +212,7 @@ namespace BilligAGI.Kern
                     sb.AppendLine($"- {e.aktion}: {Kuerze(e.ergebnis, 100)}");
             }
 
-            // 9. Analogien
+            // 10. Analogien
             if (analogien != null && analogien.Count > 0)
             {
                 sb.AppendLine("\n[Analogien]");
@@ -210,11 +220,11 @@ namespace BilligAGI.Kern
                     sb.AppendLine($"- {a.quellDommaene} -> {a.zielDomaene}: {a.transferHypothese}");
             }
 
-            // 10. Physik-Warnungen
+            // 11. Physik-Warnungen
             if (physikCheck != null && !physikCheck.plausibel)
                 sb.AppendLine($"\n[Physik-Warnung] {physikCheck.begruendung}");
 
-            // 11. Konversationsverlauf (letzte Interaktionen)
+            // 12. Konversationsverlauf (letzte Interaktionen)
             if (interaktionen.Count > 0)
             {
                 sb.AppendLine("\n[Bisheriger Gespraechsverlauf]");
