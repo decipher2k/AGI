@@ -80,6 +80,15 @@ namespace BilligAGI.Kern
                 return frame;
             }
 
+            if (IstEinfacheBegruessungOderBefinden(lower))
+            {
+                frame.intentTyp = IntentTyp.Chat;
+                frame.slots["kommando"] = "/gruss";
+                frame.konfidenz = 1f;
+                frame.kannOhneLLM = true;
+                return frame;
+            }
+
             // Kommandos
             string erstesWort = trimmed.Split(' ')[0].ToLowerInvariant();
             if (KOMMANDO_MAP.TryGetValue(erstesWort, out var kommandoTyp))
@@ -134,7 +143,8 @@ namespace BilligAGI.Kern
 
         public bool KannLokalBearbeiten(SemantikFrame frame)
         {
-            if (frame.slots.TryGetValue("kommando", out var kommando) && kommando == "/wahrnehmung")
+            if (frame.slots.TryGetValue("kommando", out var kommando) &&
+                (kommando == "/wahrnehmung" || kommando == "/gruss"))
                 return true;
 
             if (!config.llmFallbackModusAktiv)
@@ -173,6 +183,8 @@ namespace BilligAGI.Kern
                     return FormatWelt(welt);
                 case "/wahrnehmung":
                     return FormatWahrnehmung(welt, agent);
+                case "/gruss":
+                    return "Hallo! Mir geht es gut — ich bin bereit, dir zu helfen. Wenn du moechtest, kann ich dir auch gezielt den aktuellen Szenen- oder Wahrnehmungsstatus beschreiben.";
                 case "/kompetenz":
                     return systemDaten?.ContainsKey("kompetenz") == true
                         ? $"[LOKAL] Kompetenzen:\n{systemDaten["kompetenz"]}"
@@ -313,6 +325,21 @@ namespace BilligAGI.Kern
             var (quote, ziel, erreicht) = BerechneQuote();
             return $"[LOKAL] LLM-Quote: {(1f - quote):P0} LLM, {quote:P0} lokal\n" +
                    $"Ziel: {ziel:P0} lokal — {(erreicht ? "ERREICHT" : "NICHT ERREICHT")}";
+        }
+
+        private bool IstEinfacheBegruessungOderBefinden(string lower)
+        {
+            if (string.IsNullOrWhiteSpace(lower)) return false;
+
+            bool begruessung = Regex.IsMatch(lower, @"\b(hallo|hi|hey)\b") || lower.Contains("guten tag");
+            bool befinden = lower.Contains("wie geht") || lower.Contains("wiegeht") || lower.Contains("geht es dir") || lower.Contains("gehts dir");
+            bool kurz = lower.Length <= 80;
+
+            return kurz && (begruessung || befinden) &&
+                !IstWahrnehmungsanfrage(lower) &&
+                !lower.Contains("szene") &&
+                !lower.Contains("umgebung") &&
+                !lower.Contains("welt");
         }
 
         private bool IstWahrnehmungsanfrage(string lower)
