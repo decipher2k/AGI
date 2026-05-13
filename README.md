@@ -425,12 +425,14 @@ Die AGI kann sich selbst verbessern, indem sie ihre besten Erfahrungen als Train
 **Kreislauf:** Erfahrungen sammeln → beste als SFT+DPO exportieren → Fine-Tuning-Job starten → Modell hot-swappen → evaluieren → behalten oder Rollback.
 
 **Setup:**
-1. Lokalen LLM-Server mit Fine-Tuning-API starten (LM Studio, Unsloth, etc.)
-2. `fineTuningAktiv` = true setzen in AGIConfig
-3. Optional: `fineTuningApiUrl` setzen (sonst wird aus `llmApiUrl` abgeleitet)
+1. Modell in LM Studio laden, z.B. `google/gemma-4-e4b`, und den lokalen Server auf `http://127.0.0.1:1234/v1` starten.
+2. Bridge starten: `python3 tools/finetune_bridge/server.py --port 9001 --mode lmstudio-unsloth --lmstudio-url http://127.0.0.1:1234/v1 --lmstudio-base-model auto --lmstudio-output-prefix agi-gemma4-e4b --lmstudio-context-length 4096 --lmstudio-gpu max`.
+3. `llmAnbieter` = OpenAI, `llmApiUrl` = `http://127.0.0.1:1234/v1/chat/completions`, `llmModel` = geladener LM-Studio-Identifier, `fineTuningAktiv` = true und `fineTuningApiUrl` = `http://127.0.0.1:9001` setzen.
 4. Leeres GameObject → `SelbstOptimierung`-Skript anhängen, `agiKern`-Referenz zuweisen
 5. Mindestens 500 Erfahrungen sammeln (manuell oder via AutoTrainer)
 6. Fine-Tuning startet automatisch oder manuell via `/finetuning start`
+
+Der Bridge-Server liegt unter `tools/finetune_bridge/`. Im `lmstudio-unsloth`-Modus liest er das aktuell in LM Studio geladene Modell über `/v1/models`, fine-tuned es mit Unsloth, exportiert GGUF, lädt das Ergebnis per `lms load` zurück in LM Studio und gibt den neuen LM-Studio-Identifier an Unity zurück.
 
 ## Release Gates
 
