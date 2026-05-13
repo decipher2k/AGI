@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using BilligAGI.Modelle;
 using BilligAGI.Sensorik;
 using BilligAGI.Gedaechtnis;
@@ -86,7 +87,10 @@ namespace BilligAGI.Kern
             "the", "a", "an", "is", "are", "was", "has", "have", "will",
             "with", "from", "to", "in", "on", "for", "at", "by", "it",
             "i", "you", "he", "she", "we", "they", "my", "your", "his",
-            "not", "no", "also", "yet", "already", "only", "very"
+            "not", "no", "also", "yet", "already", "only", "very",
+            // Chat-/UI-Metadaten und sehr allgemeine Dialogwoerter nicht grounden.
+            "hallo", "geht", "bitte", "hier", "erste", "erster", "chat", "chatverlauf",
+            "vorherige", "vorheriger", "vorheriges", "sensorischer", "bezug", "aehnlichkeit"
         };
 
         public GroundingBruecke(VAKOGLexikon lexikon, ErfahrungsSpeicher erfahrungen, AGIConfig config)
@@ -256,6 +260,7 @@ namespace BilligAGI.Kern
             var woerter = text.ToLowerInvariant()
                 .Split(new[] { ' ', ',', '.', '!', '?', '\n', '\t', ':', ';', '"', '\'' },
                     StringSplitOptions.RemoveEmptyEntries)
+                .Select(NormalisiereToken)
                 .Where(w => w.Length >= 3)                     // Mindestens 3 Zeichen
                 .Where(w => !StoppWoerter.Contains(w))         // Keine Stoppwoerter
                 .Distinct()
@@ -263,6 +268,21 @@ namespace BilligAGI.Kern
                 .ToList();
 
             return woerter;
+        }
+
+        private string NormalisiereToken(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return string.Empty;
+
+            var sb = new StringBuilder(token.Length);
+            foreach (char c in token.Trim())
+            {
+                if (char.IsLetterOrDigit(c) || c == '-' || c == '_')
+                    sb.Append(c);
+            }
+
+            return sb.ToString().Trim('-', '_');
         }
 
         private void AktualisiereGroundingEintrag(string wort, string erfahrungsId)
