@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -39,6 +40,7 @@ namespace BilligAGI.Kern
             public string prompt;
             public string systemPrompt;
             public string model;
+            public bool stream;
             public TaskCompletionSource<bool> fertig;
         }
 
@@ -225,14 +227,9 @@ namespace BilligAGI.Kern
                 return;
             }
 
-            // Stream-Modus pruefen
+            // OpenAI-kompatibler Stream-Modus: die AGI erzeugt intern weiterhin
+            // eine vollstaendige Antwort und liefert sie danach als SSE-Delta-Chunks aus.
             bool stream = requestObj["stream"]?.Value<bool>() ?? false;
-            if (stream)
-            {
-                SendeFehler(ctx, 400, "streaming_not_supported",
-                    "Billig-AGI unterstuetzt kein Streaming. Setze stream=false.");
-                return;
-            }
 
             // Messages extrahieren
             var messages = requestObj["messages"] as JArray;
@@ -289,6 +286,7 @@ namespace BilligAGI.Kern
                 prompt = prompt,
                 systemPrompt = systemPrompt,
                 model = model,
+                stream = stream,
                 fertig = tcs
             });
 
@@ -314,13 +312,27 @@ namespace BilligAGI.Kern
                 int promptTokens = item.prompt.Length / 4;
                 int completionTokens = (antwort?.Length ?? 0) / 4;
 
+                string completionId = $"chatcmpl-agi-{Guid.NewGuid():N}";
+                long created = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                string model = string.IsNullOrWhiteSpace(item.model) ? "billig-agi" : item.model;
+                string modus = agiKern.GetModus();
+                float llmKosten = agiKern.GetLLM()?.GesamtKosten ?? 0f;
+
+                if (item.stream)
+                {
+                    SendeStreamingAntwort(item.context, completionId, created, model, antwort ?? "",
+                        promptTokens, completionTokens, dauerMs, modus, llmKosten);
+                    Debug.Log($"[AGIApi] Streaming-Antwort gesendet ({dauerMs:F0}ms, ~{promptTokens + completionTokens} tokens)");
+                    return;
+                }
+
                 // OpenAI-kompatible Antwort bauen
                 var response = new JObject
                 {
-                    ["id"] = $"chatcmpl-agi-{Guid.NewGuid():N}",
+                    ["id"] = completionId,
                     ["object"] = "chat.completion",
-                    ["created"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                    ["model"] = "billig-agi",
+                    ["created"] = created,
+                    ["model"] = model,
                     ["choices"] = new JArray
                     {
                         new JObject
@@ -344,8 +356,8 @@ namespace BilligAGI.Kern
                     ["x_agi_metadata"] = new JObject
                     {
                         ["dauer_ms"] = dauerMs,
-                        ["modus"] = agiKern.GetModus(),
-                        ["llm_kosten"] = agiKern.GetLLM()?.GesamtKosten ?? 0f
+                        ["modus"] = modus,
+                        ["llm_kosten"] = llmKosten
                     }
                 };
 
@@ -364,6 +376,115 @@ namespace BilligAGI.Kern
         }
 
         // ===== Hilfsmethoden =====
+
+
+        private static void SendeStreamingAntwort(HttpListenerContext ctx, string completionId, long created,
+            string model, string antwort, int promptTokens, int completionTokens, float dauerMs,
+            string modus, float llmKosten)
+        {
+            try
+            {
+                ctx.Response.StatusCode = 200;
+                ctx.Response.ContentType = "text/event-stream; charset=utf-8";
+                ctx.Response.SendChunked = true;
+                ctx.Response.Headers.Add("Cache-Control", "no-cache");
+                ctx.Response.Headers.Add("X-Accel-Buffering", "no");
+
+                var roleChunk = NeuerStreamChunk(completionId, created, model,
+                    new JObject { ["role"] = "assistant" }, null);
+                SendeSseData(ctx, roleChunk.ToString(Formatting.None));
+
+                foreach (string teil in TeileTextInStreamChunks(antwort))
+                {
+                    var contentChunk = NeuerStreamChunk(completionId, created, model,
+                        new JObject { ["content"] = teil }, null);
+                    SendeSseData(ctx, contentChunk.ToString(Formatting.None));
+                }
+
+                var finishChunk = NeuerStreamChunk(completionId, created, model, new JObject(), "stop");
+                finishChunk["usage"] = new JObject
+                {
+                    ["prompt_tokens"] = promptTokens,
+                    ["completion_tokens"] = completionTokens,
+                    ["total_tokens"] = promptTokens + completionTokens
+                };
+                finishChunk["x_agi_metadata"] = new JObject
+                {
+                    ["dauer_ms"] = dauerMs,
+                    ["modus"] = modus,
+                    ["llm_kosten"] = llmKosten
+                };
+                SendeSseData(ctx, finishChunk.ToString(Formatting.None));
+                SendeSseData(ctx, "[DONE]");
+                ctx.Response.OutputStream.Close();
+            }
+            catch
+            {
+                try { ctx.Response.OutputStream.Close(); }
+                catch { }
+            }
+        }
+
+        private static JObject NeuerStreamChunk(string completionId, long created, string model,
+            JObject delta, string finishReason)
+        {
+            return new JObject
+            {
+                ["id"] = completionId,
+                ["object"] = "chat.completion.chunk",
+                ["created"] = created,
+                ["model"] = model,
+                ["choices"] = new JArray
+                {
+                    new JObject
+                    {
+                        ["index"] = 0,
+                        ["delta"] = delta,
+                        ["finish_reason"] = finishReason == null ? JValue.CreateNull() : new JValue(finishReason)
+                    }
+                },
+                ["system_fingerprint"] = "billig-agi-v1"
+            };
+        }
+
+        private static IEnumerable<string> TeileTextInStreamChunks(string text, int maxZeichen = 48)
+        {
+            if (string.IsNullOrEmpty(text))
+                yield break;
+
+            int start = 0;
+            while (start < text.Length)
+            {
+                int laenge = Math.Min(maxZeichen, text.Length - start);
+                int ende = start + laenge;
+
+                if (ende < text.Length)
+                {
+                    int letzterTrenner = -1;
+                    for (int i = ende - 1; i > start; i--)
+                    {
+                        if (char.IsWhiteSpace(text[i]))
+                        {
+                            letzterTrenner = i + 1;
+                            break;
+                        }
+                    }
+
+                    if (letzterTrenner > start)
+                        ende = letzterTrenner;
+                }
+
+                yield return text.Substring(start, ende - start);
+                start = ende;
+            }
+        }
+
+        private static void SendeSseData(HttpListenerContext ctx, string data)
+        {
+            byte[] buffer = Encoding.UTF8.GetBytes($"data: {data}\n\n");
+            ctx.Response.OutputStream.Write(buffer, 0, buffer.Length);
+            ctx.Response.OutputStream.Flush();
+        }
 
         private static void SendeJsonAntwort(HttpListenerContext ctx, int statusCode, string json)
         {
