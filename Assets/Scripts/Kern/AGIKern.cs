@@ -51,7 +51,7 @@ namespace BilligAGI.Kern
         private ZielManager zielManager;
         private Planer planer;
         private Ausfuehrer ausfuehrer;
-        private Monitor monitor;
+        private BilligAGI.Intentionalitaet.Monitor monitor;
         private NarrativesSelbst narrativ;
         private SituationsBewerter bewerter;
         private WeltModell weltModell;
@@ -220,7 +220,7 @@ namespace BilligAGI.Kern
             }
 
             ausfuehrer = new Ausfuehrer(aktionsController, weltModell);
-            monitor = new Monitor(weltModell, emotionen);
+            monitor = new BilligAGI.Intentionalitaet.Monitor(weltModell, emotionen);
 
             // Narrativ + Bewertung
             var alchemie = sozialEngine.GetAlchemie();
