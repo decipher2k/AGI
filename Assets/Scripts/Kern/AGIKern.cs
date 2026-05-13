@@ -986,21 +986,38 @@ namespace BilligAGI.Kern
         public bool IstBeschaeftigt() => apiVerarbeitung || zyklusLaeuft || !string.IsNullOrWhiteSpace(pendingInput);
 
         // ==== API-Server Schnittstelle ====
-        public bool IstBereit() => initialisiert && !apiVerarbeitung;
+        public bool IstBereit() => initialisiert && !apiVerarbeitung && !zyklusLaeuft;
 
         public async Task<string> VerarbeiteAnfrageAsync(string input, string systemPrompt = null)
         {
             if (!initialisiert) return "[FEHLER] AGI nicht initialisiert";
             if (apiVerarbeitung) return "[FEHLER] AGI verarbeitet bereits eine Anfrage";
 
+            // Falls gerade ein autonomer/periodischer Zyklus laeuft, nicht sofort die
+            // letzte (oft leere) Antwort zurueckgeben. Kurz warten, damit API-Requests
+            // danach ihren eigenen Zyklus inklusive LLM-Call ausfuehren koennen.
+            float warteStart = Time.realtimeSinceStartup;
+            while (zyklusLaeuft)
+            {
+                if (Time.realtimeSinceStartup - warteStart > 30f)
+                    return "[FEHLER] AGI ist noch mit einem vorherigen Zyklus beschaeftigt";
+
+                await Task.Delay(10);
+            }
+
             apiVerarbeitung = true;
             apiSystemPrompt = systemPrompt;
             pendingInput = input;
+            letzteAntwort = null;
 
             try
             {
                 await Zyklus();
-                return letzteAntwort ?? "[Keine Antwort generiert]";
+
+                if (string.IsNullOrWhiteSpace(letzteAntwort))
+                    return "[Keine Antwort generiert]";
+
+                return letzteAntwort;
             }
             finally
             {
