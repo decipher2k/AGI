@@ -19,6 +19,15 @@ MonoBehaviour:
   maxTokensProAnfrage: 4096
   vektorDbUrl: http://localhost:8000
   vektorDbTyp: chroma
+  wikipediaRagAktiv: 1
+  wikipediaSprache: de
+  wikipediaApiUrl: https://de.wikipedia.org/w/api.php
+  wikipediaArtikelBasisUrl: https://de.wikipedia.org/wiki/
+  wikipediaTopK: 3
+  wikipediaMaxArtikel: 3
+  wikipediaChunkZeichen: 900
+  wikipediaTimeoutSekunden: 5
+  wikipediaCacheMinuten: 60
   physikKonfidenzSchwelle: 0.7
   sozialKonfidenzSchwelle: 0.6
   autonomerModus: 0

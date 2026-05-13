@@ -18,6 +18,17 @@ namespace BilligAGI
         public string vektorDbUrl = "http://localhost:8000";
         public string vektorDbTyp = "chroma"; // "chroma" oder "qdrant"
 
+        [Header("Wikipedia-RAG")]
+        public bool wikipediaRagAktiv = true;
+        public string wikipediaSprache = "de";
+        public string wikipediaApiUrl = "https://de.wikipedia.org/w/api.php";
+        public string wikipediaArtikelBasisUrl = "https://de.wikipedia.org/wiki/";
+        public int wikipediaTopK = 3;
+        public int wikipediaMaxArtikel = 3;
+        public int wikipediaChunkZeichen = 900;
+        public float wikipediaTimeoutSekunden = 5f;
+        public int wikipediaCacheMinuten = 60;
+
         [Header("Physik & Sozial")]
         [Range(0f, 1f)] public float physikKonfidenzSchwelle = 0.7f;
         [Range(0f, 1f)] public float sozialKonfidenzSchwelle = 0.6f;

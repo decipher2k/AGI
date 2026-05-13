@@ -23,6 +23,7 @@ Billig-AGI ist eine 9-Schichten-Architektur mit 32-Schritt-Verarbeitungszyklus, 
 - **Iteratives Reasoning**: Chain-of-Thought + Selbstkritik-Schleifen (konfigurierbar)
 - **Prediktives Weltmodell**: Imagination-basierte Planung (zuschaltbar/deaktivierbar)
 - **Arbeitsgedächtnis**: Strukturierter 11-Sektionen-Kontextbuffer, Token-Budget-bewusst
+- **Wikipedia-RAG**: Optionale externe Enzyklopaedie-Schicht mit Wissens-Router, MediaWiki-Retrieval und klarer Trennung von eigener Erfahrung
 - **Automatisiertes Training**: 6-Phasen-Kurrikulum (Beobachten → Navigieren → Interagieren → Sozial → Planen → Frei)
 - **Selbstoptimierung**: Automatischer Fine-Tuning-Loop (Erfahrungs-Export → SFT/DPO → Modell-Training → evaluierter Hot-Swap mit Rollback)
 - **Chat-gesteuerte Welt**: Natürlichsprachliche Weltveränderung („Erstelle einen Wald mit Regen“ → LLM parst → Unity-Szene wird gebaut)
@@ -58,6 +59,7 @@ Billig-AGI ist eine 9-Schichten-Architektur mit 32-Schritt-Verarbeitungszyklus, 
   - OpenAI API-Key
   - Lokales Modell via LM Studio, Ollama, etc. (OpenAI-kompatibel)
 - Optional: **ChromaDB** oder **Qdrant** für Vektorsuche (lokaler Fallback vorhanden)
+- Optional: **Internet-Zugriff zur MediaWiki API** für Wikipedia-RAG (`wikipediaRagAktiv`)
 
 ## Setup
 

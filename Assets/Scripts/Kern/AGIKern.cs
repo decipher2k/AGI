@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using BilligAGI.Modelle;
@@ -8,6 +9,7 @@ using BilligAGI.Sozial;
 using BilligAGI.Gedaechtnis;
 using BilligAGI.Intentionalitaet;
 using BilligAGI.Evaluation;
+using BilligAGI.Wissen;
 
 namespace BilligAGI.Kern
 {
@@ -53,6 +55,10 @@ namespace BilligAGI.Kern
         private SituationsBewerter bewerter;
         private WeltModell weltModell;
         private KonsistenzPruefer konsistenz;
+
+        // Externes Wissen / Wikipedia-RAG (klar getrennt vom autobiographischen Gedaechtnis)
+        private WikipediaWissen wikipediaWissen;
+        private WissensRouter wissensRouter;
 
         // Neue Subsysteme: Echtes Lernen (B), Emergenz (C), Meta-Kognition (D)
         private ZustandsEncoder zustandsEncoder;
@@ -164,6 +170,10 @@ namespace BilligAGI.Kern
             erfahrungen = new ErfahrungsSpeicher(vektorDB, llm, config);
             konsolidierung = new Konsolidierung(erfahrungen, config);
             langzeitLernen = new LangzeitLernen(erfahrungen, config);
+
+            // Externes Wissen bleibt von eigenen Erfahrungen getrennt.
+            wikipediaWissen = new WikipediaWissen(config);
+            wissensRouter = new WissensRouter();
 
             // Meta-Kognition (KonzeptRevision frueh, wird von Sozial gebraucht)
             konzeptRevision = new KonzeptRevision(llm, erfahrungen, config);
@@ -383,7 +393,15 @@ namespace BilligAGI.Kern
             // ==== 3. ERINNERN ====
             var aehnliche = !string.IsNullOrEmpty(input)
                 ? await erfahrungen.FindeAehnliche(input, 3)
-                : new System.Collections.Generic.List<Erfahrung>();
+                : new List<Erfahrung>();
+
+            // ==== 3b. EXTERNES WISSEN (Wikipedia-RAG) ====
+            var externesWissen = new List<WissensDokument>();
+            if (!string.IsNullOrEmpty(input) && wissensRouter != null &&
+                wissensRouter.BrauchtExternesWissen(input, frame))
+            {
+                externesWissen = await wikipediaWissen.Suche(input);
+            }
 
             // ==== 4. WELT PRUEFEN ====
             PlausibilitaetsErgebnis physikCheck = null;
@@ -519,7 +537,7 @@ namespace BilligAGI.Kern
                 if (arbeitsGedaechtnis != null)
                 {
                     enrichedSystem = arbeitsGedaechtnis.BaueSystemKontext(
-                        systemKontext, aehnliche, analogien, physikCheck);
+                        systemKontext, aehnliche, analogien, physikCheck, externesWissen);
                     enrichedSystem = FuegeGlobalWorkspaceKontextHinzu(enrichedSystem);
                 }
                 else
@@ -527,6 +545,13 @@ namespace BilligAGI.Kern
                     var sb = new System.Text.StringBuilder();
                     if (!string.IsNullOrEmpty(systemKontext))
                         sb.AppendLine(systemKontext);
+                    if (externesWissen.Count > 0)
+                    {
+                        sb.AppendLine("\n[Externes Wissen / Wikipedia]");
+                        sb.AppendLine("Nutze diese Auszuege nur als externe Quelle; nicht als eigene Erfahrung ausgeben.");
+                        foreach (var w in externesWissen)
+                            sb.AppendLine($"- {w.titel} ({w.url}): {w.text}");
+                    }
                     if (aehnliche.Count > 0)
                     {
                         sb.AppendLine("\n[Relevante Erinnerungen]");
@@ -868,6 +893,7 @@ namespace BilligAGI.Kern
         public MentaleSimulation GetMentaleSimulation() => mentaleSimulation;
         public LangzeitPlaner GetLangzeitPlaner() => langzeitPlaner;
         public SelbstCurriculum GetSelbstCurriculum() => selbstCurriculum;
+        public WikipediaWissen GetWikipediaWissen() => wikipediaWissen;
         public GroundedSprachproduktion GetGroundedSprache() => groundedSprache;
         public ZyklusStabilisator GetZyklusStabilisator() => zyklusStabilisator;
         public GlobalWorkspace GetGlobalWorkspace() => globalWorkspace;
