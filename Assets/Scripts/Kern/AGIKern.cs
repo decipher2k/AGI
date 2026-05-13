@@ -572,6 +572,8 @@ namespace BilligAGI.Kern
                     enrichedSystem = FuegeGlobalWorkspaceKontextHinzu(enrichedSystem);
                 }
 
+                enrichedSystem = FuegeAntwortGroundingHinzu(enrichedSystem, input, sensorDaten, weltModell?.zustand);
+
                 // LLM-basiert: Iteratives Reasoning oder direkt
                 LLMAntwort mod = null;
                 if (robustheit.SollLLMGenutztWerden())
@@ -843,6 +845,86 @@ namespace BilligAGI.Kern
             {
                 zyklusLaeuft = false;
             }
+        }
+
+
+        private string FuegeAntwortGroundingHinzu(string systemKontext, string input, SensorDaten sensorDaten, WeltZustand welt)
+        {
+            var sb = new System.Text.StringBuilder();
+
+            sb.AppendLine("[Antwort-Grounding / Anti-Halluzination]");
+            sb.AppendLine("Antworte direkt auf die Nutzerfrage. Bei Begruessungen oder Smalltalk keine ungefragten Umwelt-, Wetter- oder Objektberichte ausgeben.");
+            sb.AppendLine("Beschreibe nur Objekte, Farben, Wetter, Bewegungen oder Materialien, die unten explizit als Sensordaten oder Weltmodell-Fakten stehen.");
+            sb.AppendLine("Erfinde keine Objekte wie 'Objekt A/B/C' und keine Materialhypothesen, wenn Namen/Tags/Raycast-Treffer fehlen.");
+            sb.AppendLine("Wenn die Szene nur Agent, Terrain und UI enthaelt, sage das knapp und kennzeichne Unsicherheit statt Details zu halluzinieren.");
+
+            if (IstWahrnehmungsbezogeneEingabe(input))
+                sb.AppendLine("Die Eingabe ist wahrnehmungsbezogen: trenne bestaetigte Beobachtungen klar von Unsicherheit.");
+
+            if (sensorDaten != null)
+            {
+                sb.AppendLine($"Sensoren: Helligkeit {sensorDaten.helligkeit:F2}, Bewegung {sensorDaten.bewegungsIntensitaet:F2}, Audio {sensorDaten.audioPegel:F2}, Kollision {sensorDaten.kollisionsKraft:F2}.");
+
+                int nahCount = sensorDaten.nahbereichObjekte?.Length ?? 0;
+                sb.AppendLine($"Nahbereich-Objekte laut Sensorik: {nahCount}.");
+                if (nahCount > 0)
+                {
+                    int limit = System.Math.Min(nahCount, 8);
+                    for (int i = 0; i < limit; i++)
+                    {
+                        var obj = sensorDaten.nahbereichObjekte[i];
+                        sb.AppendLine($"- {obj.name} (Typ/Tag: {obj.typ}, Distanz: {obj.distanz:F1})");
+                    }
+                }
+
+                int rayCount = sensorDaten.raycasts?.Length ?? 0;
+                sb.AppendLine($"Raycast-Treffer: {rayCount}.");
+                if (rayCount > 0)
+                {
+                    int limit = System.Math.Min(rayCount, 8);
+                    for (int i = 0; i < limit; i++)
+                    {
+                        var hit = sensorDaten.raycasts[i];
+                        sb.AppendLine($"- {hit.getroffenerName} (Typ/Tag: {hit.getroffenerTyp}, Distanz: {hit.distanz:F1})");
+                    }
+                }
+            }
+            else
+            {
+                sb.AppendLine("Sensoren: kein aktueller Snapshot verfuegbar.");
+            }
+
+            if (welt != null)
+            {
+                sb.AppendLine($"Weltmodell-Fakten: Wetter {welt.wetter} (Intensitaet {welt.wetterIntensitaet:F1}), Tageszeit {welt.tageszeit:F1}h, registrierte Weltobjekte {welt.objekte?.Count ?? 0}.");
+                if (welt.objekte != null && welt.objekte.Count > 0)
+                {
+                    int count = 0;
+                    foreach (var obj in welt.objekte.Values)
+                    {
+                        if (count++ >= 8) break;
+                        sb.AppendLine($"- {obj.name} (Typ/Tag: {obj.typ}, Zustand: {obj.zustand})");
+                    }
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(systemKontext))
+                return systemKontext + "\n" + sb.ToString();
+
+            return sb.ToString();
+        }
+
+        private bool IstWahrnehmungsbezogeneEingabe(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return false;
+            string lower = input.ToLowerInvariant();
+            return lower.Contains("siehst")
+                || lower.Contains("wahr")
+                || lower.Contains("szene")
+                || lower.Contains("umgebung")
+                || lower.Contains("welt")
+                || lower.Contains("objekt")
+                || lower.Contains("terrain");
         }
 
         private string FuegeGlobalWorkspaceKontextHinzu(string systemKontext)
