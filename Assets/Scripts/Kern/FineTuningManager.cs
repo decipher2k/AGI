@@ -54,6 +54,8 @@ namespace BilligAGI.Kern
         public string zeitstempel;
         public FineTuningStatus status;
         public int generation;             // 0 = Basis, 1 = 1. Fine-Tune, ...
+        public string backendJobId;          // echte Job-ID, getrennt von Modell-ID fuer Polling/Resume
+        public string fehler;                // letzter Backend-/Validierungsfehler
     }
 
     [Serializable]
@@ -62,6 +64,7 @@ namespace BilligAGI.Kern
         public List<ModellVersion> versionen = new List<ModellVersion>();
         public int aktuelleGeneration;
         public string aktuellesModell;
+        public string laufenderJobId;
     }
 
     public class FineTuningManager
@@ -81,11 +84,13 @@ namespace BilligAGI.Kern
         public FineTuningManager(AGIConfig config)
         {
             this.config = config;
-            httpClient = new HttpClient();
+            httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+            KonfiguriereAuthHeader();
             persistenzPfad = Path.Combine(Application.persistentDataPath, "modell_historie.json");
 
             LadeHistorie();
-            status = FineTuningStatus.Bereit;
+            aktuellerJobId = historie.laufenderJobId;
+            status = string.IsNullOrEmpty(aktuellerJobId) ? FineTuningStatus.Bereit : FineTuningStatus.TrainingLaeuft;
         }
 
         // ========== Fine-Tuning starten ==========
@@ -106,11 +111,29 @@ namespace BilligAGI.Kern
                 return null;
             }
 
+            var validierung = ValidiereTrainingsDatei(trainingsDatenPfad);
+            if (!validierung.gueltig)
+            {
+                Debug.LogError($"[FineTuning] Trainingsdaten ungueltig: {validierung.fehler}");
+                return new ModellVersion
+                {
+                    id = Guid.NewGuid().ToString("N").Substring(0, 8),
+                    basisModell = config.llmModel,
+                    trainingSamples = validierung.samples > 0 ? validierung.samples : trainingSamples,
+                    vorherBelohnung = aktuellerBelohnungsDurchschnitt,
+                    trainingsDatenPfad = trainingsDatenPfad,
+                    zeitstempel = DateTime.UtcNow.ToString("o"),
+                    generation = historie.aktuelleGeneration + 1,
+                    status = FineTuningStatus.TrainingFehlgeschlagen,
+                    fehler = validierung.fehler
+                };
+            }
+
             var version = new ModellVersion
             {
                 id = Guid.NewGuid().ToString("N").Substring(0, 8),
                 basisModell = config.llmModel,
-                trainingSamples = trainingSamples,
+                trainingSamples = validierung.samples > 0 ? validierung.samples : trainingSamples,
                 vorherBelohnung = aktuellerBelohnungsDurchschnitt,
                 trainingsDatenPfad = trainingsDatenPfad,
                 zeitstempel = DateTime.UtcNow.ToString("o"),
@@ -124,14 +147,17 @@ namespace BilligAGI.Kern
             if (string.IsNullOrEmpty(jobId))
             {
                 version.status = FineTuningStatus.TrainingFehlgeschlagen;
+                version.fehler = "Backend hat keine Job-ID geliefert oder ist nicht erreichbar.";
                 Debug.LogError("[FineTuning] Job konnte nicht gestartet werden.");
                 return version;
             }
 
             aktuellerJobId = jobId;
+            version.backendJobId = jobId;
             version.fineTunedModellId = jobId; // Wird nach Abschluss durch echte Modell-ID ersetzt
             status = FineTuningStatus.TrainingLaeuft;
 
+            historie.laufenderJobId = jobId;
             historie.versionen.Add(version);
             SpeichereHistorie();
 
@@ -170,15 +196,19 @@ namespace BilligAGI.Kern
                             ?? $"ft:{config.llmModel}:gen{historie.aktuelleGeneration + 1}";
 
                         AktualisiereVersion(aktuellerJobId, neuesModell, FineTuningStatus.TrainingFertig);
+                        historie.laufenderJobId = null;
                         status = FineTuningStatus.TrainingFertig;
+                        SpeichereHistorie();
 
                         Debug.Log($"[FineTuning] Training erfolgreich! Neues Modell: {neuesModell}");
                         return true;
 
                     case "failed":
                     case "cancelled":
-                        AktualisiereVersion(aktuellerJobId, null, FineTuningStatus.TrainingFehlgeschlagen);
+                        AktualisiereVersion(aktuellerJobId, null, FineTuningStatus.TrainingFehlgeschlagen, jobStatus);
+                        historie.laufenderJobId = null;
                         status = FineTuningStatus.TrainingFehlgeschlagen;
+                        SpeichereHistorie();
                         Debug.LogError($"[FineTuning] Training fehlgeschlagen: {jobStatus}");
                         return true;
 
@@ -366,6 +396,74 @@ namespace BilligAGI.Kern
             return basis.TrimEnd('/') + endpunkt;
         }
 
+
+        private void KonfiguriereAuthHeader()
+        {
+            if (string.IsNullOrWhiteSpace(config.llmApiKey))
+                return;
+
+            if (config.llmAnbieter == LLMAnbieter.Anthropic)
+            {
+                httpClient.DefaultRequestHeaders.Remove("x-api-key");
+                httpClient.DefaultRequestHeaders.Add("x-api-key", config.llmApiKey);
+                httpClient.DefaultRequestHeaders.Remove("anthropic-version");
+                httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+            }
+            else
+            {
+                httpClient.DefaultRequestHeaders.Remove("Authorization");
+                httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {config.llmApiKey}");
+            }
+        }
+
+        public bool HatValideTrainingsdaten(string pfad, out string fehler, out int samples)
+        {
+            var ergebnis = ValidiereTrainingsDatei(pfad);
+            fehler = ergebnis.fehler;
+            samples = ergebnis.samples;
+            return ergebnis.gueltig;
+        }
+
+        private (bool gueltig, int samples, string fehler) ValidiereTrainingsDatei(string pfad)
+        {
+            if (string.IsNullOrWhiteSpace(pfad))
+                return (false, 0, "Kein Trainingsdatenpfad angegeben.");
+            if (!File.Exists(pfad))
+                return (false, 0, $"Datei nicht gefunden: {pfad}");
+
+            int samples = 0;
+            int zeileNr = 0;
+            foreach (string zeile in File.ReadLines(pfad))
+            {
+                zeileNr++;
+                if (string.IsNullOrWhiteSpace(zeile))
+                    continue;
+
+                JObject obj;
+                try
+                {
+                    obj = JObject.Parse(zeile);
+                }
+                catch (Exception ex)
+                {
+                    return (false, samples, $"JSONL-Parsefehler in Zeile {zeileNr}: {ex.Message}");
+                }
+
+                bool hatChatFormat = obj["messages"] is JArray messages && messages.Count >= 2;
+                bool hatPromptCompletion = obj["prompt"] != null && obj["completion"] != null;
+                bool hatDpoFormat = obj["chosen"] != null && obj["rejected"] != null;
+
+                if (!hatChatFormat && !hatPromptCompletion && !hatDpoFormat)
+                    return (false, samples, $"Zeile {zeileNr} hat kein unterstuetztes SFT/DPO-Format.");
+
+                samples++;
+            }
+
+            return samples > 0
+                ? (true, samples, null)
+                : (false, 0, "Trainingsdatei enthaelt keine Samples.");
+        }
+
         // ========== Persistenz ==========
 
         private void LadeHistorie()
@@ -376,24 +474,36 @@ namespace BilligAGI.Kern
                 {
                     string json = File.ReadAllText(persistenzPfad);
                     historie = JsonConvert.DeserializeObject<ModellHistorie>(json) ?? new ModellHistorie();
+                    NormalisiereHistorie();
                 }
                 else
                 {
-                    historie = new ModellHistorie
-                    {
-                        aktuellesModell = config.llmModel,
-                        aktuelleGeneration = 0
-                    };
+                    historie = NeueHistorie();
                 }
             }
             catch
             {
-                historie = new ModellHistorie
-                {
-                    aktuellesModell = config.llmModel,
-                    aktuelleGeneration = 0
-                };
+                historie = NeueHistorie();
             }
+        }
+
+
+        private ModellHistorie NeueHistorie()
+        {
+            return new ModellHistorie
+            {
+                aktuellesModell = config.llmModel,
+                aktuelleGeneration = 0,
+                versionen = new List<ModellVersion>()
+            };
+        }
+
+        private void NormalisiereHistorie()
+        {
+            if (historie.versionen == null)
+                historie.versionen = new List<ModellVersion>();
+            if (string.IsNullOrWhiteSpace(historie.aktuellesModell))
+                historie.aktuellesModell = config.llmModel;
         }
 
         private void SpeichereHistorie()
@@ -409,14 +519,15 @@ namespace BilligAGI.Kern
             }
         }
 
-        private void AktualisiereVersion(string jobId, string modellId, FineTuningStatus neuerStatus)
+        private void AktualisiereVersion(string jobId, string modellId, FineTuningStatus neuerStatus, string fehler = null)
         {
-            var version = historie.versionen.LastOrDefault(v => v.fineTunedModellId == jobId);
+            var version = historie.versionen.LastOrDefault(v => v.backendJobId == jobId || v.fineTunedModellId == jobId);
             if (version != null)
             {
                 if (!string.IsNullOrEmpty(modellId))
                     version.fineTunedModellId = modellId;
                 version.status = neuerStatus;
+                version.fehler = fehler;
                 SpeichereHistorie();
             }
         }
