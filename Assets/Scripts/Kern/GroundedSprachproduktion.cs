@@ -36,7 +36,11 @@ namespace BilligAGI.Kern
         private static readonly HashSet<string> Stoppwoerter = new(StringComparer.OrdinalIgnoreCase)
         {
             "der", "die", "das", "ein", "eine", "und", "oder", "aber", "mit", "von", "zu",
-            "im", "in", "auf", "an", "am", "ist", "sind", "war", "ich", "du", "wir", "ihr"
+            "im", "in", "auf", "an", "am", "ist", "sind", "war", "ich", "du", "wir", "ihr",
+            "was", "wie", "warum", "wo", "wer", "wann", "welche", "welcher", "welches",
+            "siehst", "hoerst", "hörst", "fuehlst", "fühlst", "machst",
+            "hallo", "geht", "dir", "bitte", "hier", "erste", "erster", "chat", "chatverlauf",
+            "vorherige", "vorheriger", "vorheriges", "sensorischer", "bezug", "aehnlichkeit"
         };
 
         public GroundedSprachproduktion(
@@ -57,6 +61,9 @@ namespace BilligAGI.Kern
         public string VeredleAntwort(string input, string basisAntwort, float[] zustandsVektor = null)
         {
             if (string.IsNullOrWhiteSpace(basisAntwort) || string.IsNullOrWhiteSpace(input))
+                return basisAntwort;
+
+            if (IstDirekteWahrnehmungsfrage(input))
                 return basisAntwort;
 
             var woerter = ExtrahiereSchluesselwoerter(input);
@@ -226,11 +233,37 @@ namespace BilligAGI.Kern
             return text.ToLowerInvariant()
                 .Split(new[] { ' ', ',', '.', '!', '?', ':', ';', '\n', '\t', '"', '\'' },
                     StringSplitOptions.RemoveEmptyEntries)
+                .Select(NormalisiereToken)
                 .Where(w => w.Length >= 3)
                 .Where(w => !Stoppwoerter.Contains(w))
                 .Distinct()
                 .Take(MAX_WORT_ANZAHL)
                 .ToList();
+        }
+
+        private string NormalisiereToken(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return string.Empty;
+
+            var sb = new StringBuilder(token.Length);
+            foreach (char c in token.Trim())
+            {
+                if (char.IsLetterOrDigit(c) || c == '-' || c == '_')
+                    sb.Append(c);
+            }
+
+            return sb.ToString().Trim('-', '_');
+        }
+
+        private bool IstDirekteWahrnehmungsfrage(string input)
+        {
+            string lower = input.Trim().ToLowerInvariant();
+            return lower.Contains("was siehst du")
+                || lower.Contains("was hoerst du")
+                || lower.Contains("was hörst du")
+                || lower.Contains("was fuehlst du")
+                || lower.Contains("was fühlst du");
         }
     }
 }

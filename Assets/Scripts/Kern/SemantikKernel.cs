@@ -69,6 +69,16 @@ namespace BilligAGI.Kern
             gesamtAnfragen++;
             var frame = new SemantikFrame();
             string trimmed = input.Trim();
+            string lower = trimmed.ToLowerInvariant();
+
+            if (IstWahrnehmungsanfrage(lower))
+            {
+                frame.intentTyp = IntentTyp.Statusanfrage;
+                frame.slots["kommando"] = "/wahrnehmung";
+                frame.konfidenz = 1f;
+                frame.kannOhneLLM = true;
+                return frame;
+            }
 
             // Kommandos
             string erstesWort = trimmed.Split(' ')[0].ToLowerInvariant();
@@ -124,6 +134,9 @@ namespace BilligAGI.Kern
 
         public bool KannLokalBearbeiten(SemantikFrame frame)
         {
+            if (frame.slots.TryGetValue("kommando", out var kommando) && kommando == "/wahrnehmung")
+                return true;
+
             if (!config.llmFallbackModusAktiv)
                 return false;
 
@@ -158,6 +171,8 @@ namespace BilligAGI.Kern
                         : "[LOKAL] Kein aktiver Plan.";
                 case "/welt":
                     return FormatWelt(welt);
+                case "/wahrnehmung":
+                    return FormatWahrnehmung(welt, agent);
                 case "/kompetenz":
                     return systemDaten?.ContainsKey("kompetenz") == true
                         ? $"[LOKAL] Kompetenzen:\n{systemDaten["kompetenz"]}"
@@ -267,11 +282,49 @@ namespace BilligAGI.Kern
             return s;
         }
 
+        private string FormatWahrnehmung(WeltZustand welt, AgentZustand agent)
+        {
+            if (welt == null)
+                return "[LOKAL] Ich habe aktuell kein Weltmodell, aus dem ich eine Wahrnehmung ableiten kann.";
+
+            string s = "[LOKAL] Ich sehe im aktuellen Weltmodell:\n";
+            s += $"- Umgebung: Wetter {welt.wetter} ({welt.wetterIntensitaet:F1}), Tageszeit {welt.tageszeit:F1}h.\n";
+
+            if (agent != null && agent.position != null && agent.position.Length >= 3)
+                s += $"- Eigene Position: [{agent.position[0]:F1}, {agent.position[1]:F1}, {agent.position[2]:F1}].\n";
+
+            if (welt.objekte == null || welt.objekte.Count == 0)
+                return s + "- Keine registrierten Objekte.";
+
+            foreach (var obj in welt.objekte.Values.Take(8))
+            {
+                string zustand = string.IsNullOrEmpty(obj.zustand) ? "ohne besonderen Zustand" : obj.zustand;
+                s += $"- {obj.name} ({obj.typ}) bei [{obj.position[0]:F0},{obj.position[1]:F0},{obj.position[2]:F0}] — {zustand}.\n";
+            }
+
+            if (welt.objekte.Count > 8)
+                s += $"- ... und {welt.objekte.Count - 8} weitere registrierte Objekte.\n";
+
+            return s.TrimEnd();
+        }
+
         private string FormatQuote()
         {
             var (quote, ziel, erreicht) = BerechneQuote();
             return $"[LOKAL] LLM-Quote: {(1f - quote):P0} LLM, {quote:P0} lokal\n" +
                    $"Ziel: {ziel:P0} lokal — {(erreicht ? "ERREICHT" : "NICHT ERREICHT")}";
+        }
+
+        private bool IstWahrnehmungsanfrage(string lower)
+        {
+            return lower.Contains("was siehst du")
+                || lower.Contains("was hoerst du")
+                || lower.Contains("was hörst du")
+                || lower.Contains("was fuehlst du")
+                || lower.Contains("was fühlst du")
+                || lower.Contains("was nimmst du wahr")
+                || lower.Contains("was ist in der szene")
+                || lower.Contains("was ist in deiner welt");
         }
     }
 }
