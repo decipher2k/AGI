@@ -106,6 +106,9 @@ namespace BilligAGI.Kern
         // Stabilitaets-Refactor: QoS fuer Zykluslatenz
         private ZyklusStabilisator zyklusStabilisator;
 
+        // Integrationsschicht: gemeinsamer Aufmerksamkeitsfokus fuer alle Module
+        private GlobalWorkspace globalWorkspace;
+
         // Phase 28 (Start): Autonome Missions-Sessions
         private AutonomieMissionen autonomieMissionen;
 
@@ -234,6 +237,7 @@ namespace BilligAGI.Kern
 
             // D) Meta-Kognition
             metaKognition = new MetaKognition();
+            globalWorkspace = new GlobalWorkspace();
 
             // Phase 16: Arbeitsgedaechtnis + Prediktives Weltmodell
             if (config.arbeitsGedaechtnisAktiv)
@@ -245,6 +249,12 @@ namespace BilligAGI.Kern
             // Phase 18: Selbstoptimierung / Fine-Tuning
             erfahrungsExporter = new ErfahrungsExporter();
             fineTuningManager = new FineTuningManager(config);
+            if (!string.IsNullOrEmpty(fineTuningManager.AktuellesModell) &&
+                fineTuningManager.AktuellesModell != config.llmModel)
+            {
+                llm.WechsleModell(fineTuningManager.AktuellesModell);
+                Debug.Log($"[AGIKern] Fine-Tuning-Historie aktiv: {fineTuningManager.AktuellesModell}");
+            }
             selbstOptimierung = GetComponent<SelbstOptimierung>();
             if (selbstOptimierung != null)
                 selbstOptimierung.Initialisiere(config, llm, erfahrungen, erfahrungsExporter, fineTuningManager);
@@ -462,12 +472,22 @@ namespace BilligAGI.Kern
             }
 
             // Prediktives Weltmodell: Imagination-basierte Planung
+            AktionsTyp? weltmodellBesteAktion = null;
+            float weltmodellErwarteterReward = 0f;
             if (prediktivesModell != null && prediktivesModell.Aktiv)
             {
                 var (besteAktion, erwarteterReward) = prediktivesModell.PlaneMitModell(zustandsVektor);
+                weltmodellBesteAktion = besteAktion;
+                weltmodellErwarteterReward = erwarteterReward;
                 bb.Schreibe("weltmodell_beste_aktion", besteAktion);
                 bb.Schreibe("weltmodell_erwarteter_reward", erwarteterReward);
             }
+
+            globalWorkspace?.Aktualisiere(
+                input, weltModell?.zustand, agentZustand, emotionen.zustand, aktuellesZiel,
+                aehnliche, sozialAnalyse, physikCheck, rlKonfidenz2, rlAktion,
+                weltmodellBesteAktion, weltmodellErwarteterReward);
+            bb.Schreibe("global_workspace_fokus", globalWorkspace?.AktuellerFokus?.inhalt);
 
             // ==== 11. PLANEN ====
             if (aktuellesZiel != null && aktuellerPlan == null)
@@ -500,6 +520,7 @@ namespace BilligAGI.Kern
                 {
                     enrichedSystem = arbeitsGedaechtnis.BaueSystemKontext(
                         systemKontext, aehnliche, analogien, physikCheck);
+                    enrichedSystem = FuegeGlobalWorkspaceKontextHinzu(enrichedSystem);
                 }
                 else
                 {
@@ -523,6 +544,7 @@ namespace BilligAGI.Kern
                     if (sozialAnalyse?.erkannteMechanismen?.Count > 0)
                         sb.AppendLine($"\n[Sozial-Kontext] Archetyp: {sozialAnalyse.archetyp}, Phase: {sozialAnalyse.alchemischePhase}");
                     enrichedSystem = sb.Length > 0 ? sb.ToString() : null;
+                    enrichedSystem = FuegeGlobalWorkspaceKontextHinzu(enrichedSystem);
                 }
 
                 // LLM-basiert: Iteratives Reasoning oder direkt
@@ -798,6 +820,16 @@ namespace BilligAGI.Kern
             }
         }
 
+        private string FuegeGlobalWorkspaceKontextHinzu(string systemKontext)
+        {
+            string workspaceKontext = globalWorkspace?.BauePromptKontext();
+            if (string.IsNullOrWhiteSpace(workspaceKontext))
+                return systemKontext;
+            if (string.IsNullOrWhiteSpace(systemKontext))
+                return workspaceKontext;
+            return systemKontext + "\n" + workspaceKontext;
+        }
+
         // Oeffentliche API
         public string GetModus() => autonomerModus ? "AUTONOM" : "REAKTIV";
         public void SetzeAutonom(bool an) { autonomerModus = an; autonomeSchritte = 0; }
@@ -838,6 +870,7 @@ namespace BilligAGI.Kern
         public SelbstCurriculum GetSelbstCurriculum() => selbstCurriculum;
         public GroundedSprachproduktion GetGroundedSprache() => groundedSprache;
         public ZyklusStabilisator GetZyklusStabilisator() => zyklusStabilisator;
+        public GlobalWorkspace GetGlobalWorkspace() => globalWorkspace;
         public AutonomieMissionen GetAutonomieMissionen() => autonomieMissionen;
         public Arc2Evaluator GetArc2Evaluator() => arc2Evaluator;
         public float[] GetLetzterZustandsVektor() => letzterZustandsVektor;
