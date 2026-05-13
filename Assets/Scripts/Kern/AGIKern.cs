@@ -1010,26 +1010,42 @@ namespace BilligAGI.Kern
             if (!initialisiert) return "[FEHLER] AGI nicht initialisiert";
             if (apiVerarbeitung) return "[FEHLER] AGI verarbeitet bereits eine Anfrage";
 
-            // Falls gerade ein AutoTrainer-/periodischer Zyklus laeuft oder bereits
-            // ein Trainings-Input vorgemerkt ist, kurz warten. Dadurch ueberschreibt
-            // die API keinen Trainings-Input, bekommt danach aber Prioritaet vor dem
-            // naechsten AutoTrainer-Schritt.
-            float warteStart = Time.realtimeSinceStartup;
-            while (zyklusLaeuft || !string.IsNullOrWhiteSpace(pendingInput))
-            {
-                if (Time.realtimeSinceStartup - warteStart > 30f)
-                    return "[FEHLER] AGI ist noch mit einem vorherigen Zyklus beschaeftigt";
-
-                await Task.Delay(10);
-            }
-
+            // API-Anfragen reservieren den Kern sofort. Dadurch kann zwischen
+            // Annahme der HTTP-Anfrage und dem eigentlichen API-Zyklus kein neuer
+            // AutoTrainer-/Update-Zyklus starten, der den Client wieder in einen
+            // Busy-Timeout laufen laesst.
             apiVerarbeitung = true;
-            apiSystemPrompt = systemPrompt;
-            pendingInput = input;
-            letzteAntwort = null;
+
+            string pausierterInput = null;
+            string pausierterSystemPrompt = null;
 
             try
             {
+                // Ein bereits laufender Zyklus darf sauber beenden. Nur vorgemerkte,
+                // aber noch nicht gestartete Inputs werden kurz pausiert, damit API-
+                // Clients nicht hinter Trainings-Inputs verhungern.
+                float warteStart = Time.realtimeSinceStartup;
+                float maxWartezeit = Mathf.Max(1f, config != null ? config.apiRecoveryMaxSekunden : 120f);
+                while (zyklusLaeuft)
+                {
+                    if (Time.realtimeSinceStartup - warteStart > maxWartezeit)
+                        return "[FEHLER] AGI ist noch mit einem vorherigen Zyklus beschaeftigt";
+
+                    await Task.Delay(10);
+                }
+
+                if (!string.IsNullOrWhiteSpace(pendingInput))
+                {
+                    pausierterInput = pendingInput;
+                    pausierterSystemPrompt = apiSystemPrompt;
+                    pendingInput = null;
+                    apiSystemPrompt = null;
+                }
+
+                apiSystemPrompt = systemPrompt;
+                pendingInput = input;
+                letzteAntwort = null;
+
                 await Zyklus();
 
                 if (string.IsNullOrWhiteSpace(letzteAntwort))
@@ -1039,6 +1055,12 @@ namespace BilligAGI.Kern
             }
             finally
             {
+                if (!string.IsNullOrWhiteSpace(pausierterInput) && string.IsNullOrWhiteSpace(pendingInput))
+                {
+                    pendingInput = pausierterInput;
+                    apiSystemPrompt = pausierterSystemPrompt;
+                }
+
                 apiVerarbeitung = false;
             }
         }
