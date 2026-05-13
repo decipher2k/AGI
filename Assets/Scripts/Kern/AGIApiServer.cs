@@ -165,7 +165,9 @@ namespace BilligAGI.Kern
                     {
                         var health = new JObject
                         {
-                            ["status"] = agiKern?.IstBereit() == true ? "ready" : "initializing",
+                            ["status"] = agiKern?.IstInitialisiert() == true
+                                ? (agiKern.IstBeschaeftigt() ? "busy" : "ready")
+                                : "initializing",
                             ["model"] = "billig-agi",
                             ["version"] = "1.0"
                         };
@@ -271,15 +273,18 @@ namespace BilligAGI.Kern
 
             string model = requestObj["model"]?.ToString() ?? "billig-agi";
 
-            // AGI ist nicht bereit?
-            if (agiKern == null || !agiKern.IstBereit())
+            // AGI ist noch nicht initialisiert? Beschaeftigte Zyklen sind kein
+            // Ablehnungsgrund: Die Anfrage wird angenommen und mit Vorrang vor
+            // weiteren AutoTrainer-Schritten abgearbeitet.
+            if (agiKern == null || !agiKern.KannApiAnfrageAnnehmen())
             {
-                SendeFehler(ctx, 503, "model_not_ready", "AGI initialisiert noch oder verarbeitet eine Anfrage");
+                SendeFehler(ctx, 503, "model_not_ready", "AGI initialisiert noch");
                 return;
             }
 
             // Anfrage in Queue fuer Main-Thread einreihen
             var tcs = new TaskCompletionSource<bool>();
+            agiKern.RegistriereWartendeApiAnfrage();
             warteschlange.Enqueue(new AnfrageItem
             {
                 context = ctx,
@@ -302,6 +307,7 @@ namespace BilligAGI.Kern
 
             try
             {
+                agiKern?.EntferneWartendeApiAnfrage();
                 Debug.Log($"[AGIApi] Anfrage empfangen: {item.prompt.Substring(0, Math.Min(item.prompt.Length, 100))}...");
 
                 // AGI-Zyklus durchlaufen
