@@ -47,7 +47,11 @@ namespace BilligAGI.UI
             }
 
             if (sendenButton != null) sendenButton.onClick.AddListener(Senden);
-            if (inputField != null) inputField.onEndEdit.AddListener(OnEndEdit);
+            if (inputField != null)
+            {
+                inputField.onSubmit.AddListener(OnSubmit);
+                inputField.onEndEdit.AddListener(OnEndEdit);
+            }
             if (agiKern != null) agiKern.OnAntwort += OnAGIAntwort;
 
             ZeigeNachricht("[System] Billig-AGI Chat bereit. Tippe /hilfe fuer Befehle.");
@@ -173,9 +177,15 @@ namespace BilligAGI.UI
             ZeigeNachricht($"[AGI] {antwort}");
         }
 
+        private void OnSubmit(string text)
+        {
+            Senden();
+        }
+
         private void OnEndEdit(string text)
         {
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+            // Submit when Enter was pressed; OnEndEdit also fires on focus loss
+            if (Input.GetKey(KeyCode.Return) || Input.GetKey(KeyCode.KeypadEnter))
                 Senden();
         }
 
@@ -186,6 +196,7 @@ namespace BilligAGI.UI
             if (string.IsNullOrEmpty(input)) return;
 
             inputField.text = "";
+            inputField.ActivateInputField();
             ZeigeNachricht($"[Du] {input}");
 
             // Befehle verarbeiten
@@ -196,8 +207,17 @@ namespace BilligAGI.UI
             }
 
             // An AGI-Kern senden
-            if (agiKern != null)
-                agiKern.VerarbeiteInput(input);
+            if (agiKern == null)
+            {
+                ZeigeNachricht("[Fehler] AGI-Kern nicht verbunden.");
+                return;
+            }
+            if (!agiKern.IstBereit())
+            {
+                ZeigeNachricht("[System] AGI initialisiert noch... bitte warten.");
+                return;
+            }
+            agiKern.VerarbeiteInput(input);
         }
 
         private void VerarbeiteBefehl(string befehl)

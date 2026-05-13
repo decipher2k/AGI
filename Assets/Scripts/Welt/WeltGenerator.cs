@@ -27,6 +27,47 @@ namespace BilligAGI.Welt
 
         private Transform ZielParent => worldParent != null ? worldParent : transform;
 
+        private void Awake()
+        {
+            EnsureNavMeshSurface();
+        }
+
+        private void EnsureNavMeshSurface()
+        {
+            if (navMeshSurface != null) return;
+
+            // Try to find or add a NavMeshSurface at runtime
+            navMeshSurface = GetComponent<MonoBehaviour>();
+            if (navMeshSurface != null && navMeshSurface.GetType().Name == "NavMeshSurface")
+                return;
+
+            // Check if one already exists on this GameObject
+            var existing = GetComponents<MonoBehaviour>();
+            foreach (var c in existing)
+            {
+                if (c != null && c.GetType().Name == "NavMeshSurface")
+                {
+                    navMeshSurface = c;
+                    Debug.Log("[WeltGenerator] Found existing NavMeshSurface on World GameObject.");
+                    return;
+                }
+            }
+
+            // Try to dynamically add NavMeshSurface from AI Navigation package
+            var navType = System.Type.GetType("Unity.AI.Navigation.NavMeshSurface, Unity.AI.Navigation");
+            if (navType != null)
+            {
+                navMeshSurface = (MonoBehaviour)gameObject.AddComponent(navType);
+                Debug.Log("[WeltGenerator] Dynamically created NavMeshSurface component.");
+            }
+            else
+            {
+                Debug.LogWarning("[WeltGenerator] Unity.AI.Navigation package not found. " +
+                    "NavMesh baking disabled. Agent cannot navigate.\n" +
+                    "Install com.unity.ai.navigation via Package Manager.");
+            }
+        }
+
         public void GeneriereWelt(Modelle.WeltBeschreibung beschreibung)
         {
             Debug.Log($"[WeltGenerator] Generiere Welt: {beschreibung.name} ({beschreibung.biom})");

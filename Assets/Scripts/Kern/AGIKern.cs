@@ -139,11 +139,14 @@ namespace BilligAGI.Kern
         {
             Debug.Log("[AGIKern] Initialisiere Billig-AGI...");
 
-            // Kern-Subsysteme
-            llm = new LLMAdapter(config);
-            semantik = new SemantikKernel(config);
-            robustheit = new RobustheitsManager(config);
-            kreativitaet = new KreativitaetsEngine(config, llm);
+            try
+            {
+                // Kern-Subsysteme
+                llm = new LLMAdapter(config);
+                Debug.Log("[AGIKern] LLMAdapter erstellt.");
+                semantik = new SemantikKernel(config);
+                robustheit = new RobustheitsManager(config);
+                kreativitaet = new KreativitaetsEngine(config, llm);
 
             // Sensorik
             vakogLexikon = new VAKOGLexikon(llm);
@@ -294,6 +297,14 @@ namespace BilligAGI.Kern
             autonomerModus = config.autonomerModus;
             initialisiert = true;
             Debug.Log("[AGIKern] Initialisierung abgeschlossen.");
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogError($"[AGIKern] Initialisierung fehlgeschlagen: {ex.Message}\n{ex.StackTrace}");
+                // Mark as initialized anyway so Update() doesn't retry endlessly;
+                // subsystems that failed will degrade gracefully.
+                initialisiert = true;
+            }
         }
 
         private void Update()
@@ -327,7 +338,15 @@ namespace BilligAGI.Kern
                 apiSystemPrompt = null;
 
             // ==== 0b. PHYSIK-INTUITION ====
-            SensorDaten sensorDaten = sensorSuite != null ? sensorSuite.AktualisiereSensoren() : null;
+            SensorDaten sensorDaten = null;
+            try
+            {
+                sensorDaten = sensorSuite != null ? sensorSuite.AktualisiereSensoren() : null;
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning($"[AGIKern] SensorSuite-Fehler: {ex.Message}");
+            }
             if (physikSimulator != null)
                 physikSimulator.ZyklusTick(weltModell?.zustand, sensorDaten, config.zyklusIntervall);
 
