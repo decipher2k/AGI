@@ -199,12 +199,10 @@ Assets/
 | `/llmquote` | Lokal-vs-LLM-Quote |
 | `/geschichte` | Autobiographische Kapitel |
 | `/konsolidiere` | Gedächtniskonsolidierung |
-
 | `/training` | Trainings-Status |
 | `/training start\|stop` | Training starten/pausieren |
 | `/training reset` | Training zurücksetzen |
 | `/training phase <0-5>` | Trainingsphase manuell setzen |
-
 | `/finetuning` | Fine-Tuning-Status und Modell-Info |
 | `/finetuning start` | Fine-Tuning manuell starten |
 | `/finetuning rollback` | Zum vorherigen Modell zurück |
