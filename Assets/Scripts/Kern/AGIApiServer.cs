@@ -399,90 +399,6 @@ namespace BilligAGI.Kern
         // ===== Hilfsmethoden =====
 
 
-        private static ChatRequest ExtrahiereChatRequest(JObject requestObj)
-        {
-            // OpenAI-kompatibler Stream-Modus: die AGI erzeugt intern weiterhin
-            // eine vollstaendige Antwort und liefert sie danach als SSE-Delta-Chunks aus.
-            bool stream = requestObj["stream"]?.Value<bool>() ?? false;
-
-            var messages = requestObj["messages"] as JArray;
-            if (messages == null || messages.Count == 0)
-                throw new ArgumentException("messages-Array fehlt oder leer");
-
-            string systemPrompt = null;
-            var userParts = new StringBuilder();
-
-            foreach (var msg in messages)
-            {
-                string role = msg["role"]?.ToString() ?? "";
-                string content = ExtrahiereMessageContent(msg["content"]);
-
-                if (role == "system")
-                    systemPrompt = content;
-                else if (role == "user")
-                {
-                    if (userParts.Length > 0) userParts.AppendLine();
-                    userParts.Append(content);
-                }
-                else if (role == "assistant")
-                {
-                    if (userParts.Length > 0) userParts.AppendLine();
-                    userParts.Append($"[Vorherige Antwort: {content}]");
-                }
-            }
-
-            string prompt = userParts.ToString();
-            if (string.IsNullOrWhiteSpace(prompt))
-                throw new ArgumentException("Kein User-Content in messages");
-
-            return new ChatRequest
-            {
-                prompt = prompt,
-                systemPrompt = systemPrompt,
-                model = requestObj["model"]?.ToString() ?? "billig-agi",
-                stream = stream
-            };
-        }
-
-        private static string ExtrahiereMessageContent(JToken contentToken)
-        {
-            if (contentToken == null || contentToken.Type == JTokenType.Null)
-                return "";
-
-            if (contentToken.Type == JTokenType.String)
-                return contentToken.ToString();
-
-            if (contentToken.Type == JTokenType.Array)
-            {
-                var sb = new StringBuilder();
-                foreach (var part in contentToken.Children())
-                {
-                    string text = part["text"]?.ToString() ?? part["content"]?.ToString() ?? part.ToString(Formatting.None);
-                    if (string.IsNullOrWhiteSpace(text))
-                        continue;
-                    if (sb.Length > 0) sb.AppendLine();
-                    sb.Append(text);
-                }
-                return sb.ToString();
-            }
-
-            return contentToken.ToString(Formatting.None);
-        }
-
-        private static void SendeFehlerEinmal(AnfrageItem item, int statusCode, string errorType, string message)
-        {
-            if (!item.ReserviereAntwort())
-                return;
-
-            if (item.stream && item.streamingGestartet)
-            {
-                SendeStreamingFehler(item.context, item.completionId, item.created, item.model, errorType, message);
-                return;
-            }
-
-            SendeFehler(item.context, statusCode, errorType, message);
-        }
-
         private static string NormalisiereAntworttext(string antwort)
         {
             return string.IsNullOrWhiteSpace(antwort)
@@ -490,7 +406,9 @@ namespace BilligAGI.Kern
                 : antwort;
         }
 
-        private static bool SendeStreamingStart(HttpListenerContext ctx, string completionId, long created, string model)
+        private static void SendeStreamingAntwort(HttpListenerContext ctx, string completionId, long created,
+            string model, string antwort, int promptTokens, int completionTokens, float dauerMs,
+            string modus, float llmKosten)
         {
             try
             {
