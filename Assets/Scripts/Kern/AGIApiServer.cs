@@ -293,7 +293,10 @@ namespace BilligAGI.Kern
             warteschlange.Enqueue(item);
 
             if (item.stream)
-                item.streamingGestartet = SendeStreamingStart(item.context, item.completionId, item.created, item.model);
+            {
+                string streamModel = string.IsNullOrWhiteSpace(item.model) ? "billig-agi" : item.model;
+                item.streamingGestartet = SendeStreamingStart(item.context, item.completionId, item.created, streamModel);
+            }
 
             // Blockierend warten, aber nur begrenzt: ohne Timeout schliessen viele
             // Clients die Verbindung selbst und melden dann "empty response from server".
@@ -518,8 +521,8 @@ namespace BilligAGI.Kern
         {
             try
             {
-                if (includeRoleChunk)
-                    SendeStreamingStart(ctx, completionId, created, model);
+                if (includeRoleChunk && !SendeStreamingStart(ctx, completionId, created, model))
+                    return;
 
                 foreach (string teil in TeileTextInStreamChunks(antwort))
                 {
