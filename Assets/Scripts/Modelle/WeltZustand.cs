@@ -27,6 +27,16 @@ namespace BilligAGI.Modelle
         public float[] rotation = new float[3];
         public List<string> tags = new List<string>();
         public string zustand; // "offen", "geschlossen", etc.
+
+        // Physikalische Semantik fuer automatisch aufgebaute und simulierte Szenen.
+        // Die Werte duerfen direkt aus Prompt-Hinweisen (z.B. glatt, schnell, bremst,
+        // aerodynamisch, zerbrechlich) oder aus Unity-Komponenten gespeist werden.
+        public float masseKg = 1f;
+        public float reibung = 0.5f;
+        public float luftWiderstand = 0.05f;
+        public float elastizitaet = 0.2f;
+        public float bruchSchwelle = 10f;
+        public float[] geschwindigkeit = new float[3];
         public Dictionary<string, string> relationen = new Dictionary<string, string>(); // "auf": "tisch_01"
     }
 
