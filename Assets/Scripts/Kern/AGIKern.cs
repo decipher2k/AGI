@@ -349,6 +349,7 @@ namespace BilligAGI.Kern
                 return;
 
             zyklusLaeuft = true;
+            bool istApiZyklus = apiVerarbeitung;
 
             try
             {
@@ -622,6 +623,12 @@ namespace BilligAGI.Kern
                 }
             }
 
+            // API-Antwort frueh sichern: optionale Nachlauf-Schritte (Handeln, Lernen,
+            // Curriculum) duerfen eine bereits erzeugte Chat-Antwort nicht mehr
+            // verlieren, falls dort spaeter ein Fehler auftritt.
+            if (istApiZyklus && !string.IsNullOrWhiteSpace(input) && !string.IsNullOrWhiteSpace(antwort))
+                letzteAntwort = antwort;
+
             // ==== 13. HANDELN ====
             if (autonomerModus && aktuellerPlan != null && aktuellerPlanSchritt < aktuellerPlan.aktionen.Count)
             {
@@ -800,10 +807,17 @@ namespace BilligAGI.Kern
                 // ==== 16g. SELBST-CURRICULUM: Uebung auswerten ====
                 if (selbstCurriculum != null)
                 {
-                    bool aktionErfolg = erfahrung.belohnung > 0f;
-                    var uebung = selbstCurriculum.ZyklusTick(erfahrung.belohnung, aktionErfolg);
-                    if (uebung != null)
-                        Debug.Log($"[Curriculum] Uebung: {uebung.beschreibung} ({uebung.domaene})");
+                    try
+                    {
+                        bool aktionErfolg = erfahrung.belohnung > 0f;
+                        var uebung = selbstCurriculum.ZyklusTick(erfahrung.belohnung, aktionErfolg);
+                        if (uebung != null)
+                            Debug.Log($"[Curriculum] Uebung: {uebung.beschreibung} ({uebung.domaene})");
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Debug.LogWarning($"[Curriculum] Uebersprungen (Fehler): {ex.Message}");
+                    }
                 }
 
                 // ==== 18. NARRATIV + NEUGIER ====
@@ -1046,7 +1060,17 @@ namespace BilligAGI.Kern
                 pendingInput = input;
                 letzteAntwort = null;
 
-                await Zyklus();
+                try
+                {
+                    await Zyklus();
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError($"[AGIKern] API-Zyklus abgebrochen: {ex.Message}\n{ex.StackTrace}");
+                    if (!string.IsNullOrWhiteSpace(letzteAntwort))
+                        return letzteAntwort;
+                    return $"[FEHLER] API-Zyklus abgebrochen: {ex.Message}";
+                }
 
                 if (string.IsNullOrWhiteSpace(letzteAntwort))
                     return "[Keine Antwort generiert]";
