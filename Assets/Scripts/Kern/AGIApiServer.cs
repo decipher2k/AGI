@@ -23,8 +23,8 @@ namespace BilligAGI.Kern
         [Header("Server")]
         public int port = 8741;
         public bool autoStart = true;
-        [Tooltip("Maximale Wartezeit, bevor der HTTP-Client eine JSON-Fehlerantwort statt einer leeren/abgebrochenen Verbindung bekommt.")]
-        public float requestTimeoutSekunden = 25f;
+        [Tooltip("Maximale Wartezeit, bevor der HTTP-Client eine JSON-Fehlerantwort statt einer leeren/abgebrochenen Verbindung bekommt. Wenn agiKern.config.apiRequestTimeoutSekunden > 0 ist, hat die Config Vorrang.")]
+        public float requestTimeoutSekunden = 300f;
 
         [Header("Referenzen")]
         public AGIKern agiKern;
@@ -195,7 +195,8 @@ namespace BilligAGI.Kern
                                 ? (agiKern.IstBeschaeftigt() ? "busy" : "ready")
                                 : "initializing",
                             ["model"] = "billig-agi",
-                            ["version"] = "1.0"
+                            ["version"] = "1.0",
+                            ["request_timeout_sekunden"] = EffektiveRequestTimeoutSekunden()
                         };
                         SendeJsonAntwort(ctx, 200, health.ToString());
                         continue;
@@ -300,7 +301,8 @@ namespace BilligAGI.Kern
 
             // Blockierend warten, aber nur begrenzt: ohne Timeout schliessen viele
             // Clients die Verbindung selbst und melden dann "empty response from server".
-            var timeout = TimeSpan.FromSeconds(Mathf.Max(1f, requestTimeoutSekunden));
+            float timeoutSekunden = EffektiveRequestTimeoutSekunden();
+            var timeout = TimeSpan.FromSeconds(timeoutSekunden);
             if (!tcs.Task.Wait(timeout))
             {
                 bool nochNichtGestartet = Interlocked.CompareExchange(ref item.mainThreadGestartet, 2, 0) == 0;
@@ -308,8 +310,8 @@ namespace BilligAGI.Kern
                     agiKern.EntferneWartendeApiAnfrage();
 
                 string message = nochNichtGestartet
-                    ? "API-Anfrage wartete zu lange auf den Unity-Main-Thread."
-                    : "API-Verarbeitung dauerte zu lange; pruefe LLM-Server, Autonomie-/Training-Last oder erhoehe requestTimeoutSekunden.";
+                    ? $"API-Anfrage wartete laenger als {timeoutSekunden:F0}s auf den Unity-Main-Thread."
+                    : $"API-Verarbeitung dauerte laenger als {timeoutSekunden:F0}s; pruefe LLM-Server, Autonomie-/Training-Last oder erhoehe AGIConfig.apiRequestTimeoutSekunden bzw. requestTimeoutSekunden.";
                 SendeFehlerEinmal(item, 504, "request_timeout", message);
             }
         }
@@ -401,6 +403,14 @@ namespace BilligAGI.Kern
 
         // ===== Hilfsmethoden =====
 
+
+        private float EffektiveRequestTimeoutSekunden()
+        {
+            if (agiKern != null && agiKern.config != null && agiKern.config.apiRequestTimeoutSekunden > 0f)
+                return Mathf.Max(1f, agiKern.config.apiRequestTimeoutSekunden);
+
+            return Mathf.Max(1f, requestTimeoutSekunden);
+        }
 
         private static string NormalisiereAntworttext(string antwort)
         {

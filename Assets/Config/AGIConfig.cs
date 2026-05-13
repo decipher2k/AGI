@@ -13,6 +13,10 @@ namespace BilligAGI
         public string llmModel = "claude-sonnet-4-20250514";
         public string llmApiUrl = "https://api.anthropic.com/v1/messages";
         public int maxTokensProAnfrage = 4096;
+        [Tooltip("HTTP-Timeout fuer einzelne LLM-Aufrufe. Lokale Modelle brauchen beim ersten Prompt oft laenger.")]
+        public float llmRequestTimeoutSekunden = 180f;
+        [Tooltip("Gesamte maximale Wartezeit des OpenAI-kompatiblen API-Servers pro Chat-Completion.")]
+        public float apiRequestTimeoutSekunden = 300f;
 
         [Header("Vektor-DB")]
         public string vektorDbUrl = "http://localhost:8000";

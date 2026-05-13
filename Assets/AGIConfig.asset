@@ -17,6 +17,8 @@ MonoBehaviour:
   llmModel: llama3.1:8b
   llmApiUrl: http://localhost:11434/v1/chat/completions
   maxTokensProAnfrage: 4096
+  llmRequestTimeoutSekunden: 180
+  apiRequestTimeoutSekunden: 300
   vektorDbUrl: http://localhost:8000
   vektorDbTyp: chroma
   wikipediaRagAktiv: 1
