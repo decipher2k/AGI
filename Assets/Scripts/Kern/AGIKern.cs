@@ -102,6 +102,7 @@ namespace BilligAGI.Kern
         // Phase 25: Intuitive Physik + Mentale Simulation
         private IntuitiverPhysikSimulator physikSimulator;
         private MentaleSimulation mentaleSimulation;
+        private PromptSzenarioSimulator promptSzenarioSimulator;
 
         // Phase 26: Langzeit-Planung + Selbst-Curriculum
         private LangzeitPlaner langzeitPlaner;
@@ -296,6 +297,7 @@ namespace BilligAGI.Kern
             // Phase 25: Intuitive Physik + Mentale Simulation
             physikSimulator = new IntuitiverPhysikSimulator(physikEngine, prediktivesModell, config);
             mentaleSimulation = new MentaleSimulation(prediktivesModell, physikSimulator, config);
+            promptSzenarioSimulator = new PromptSzenarioSimulator();
 
             // Phase 26: Langzeit-Planung + Selbst-Curriculum
             langzeitPlaner = new LangzeitPlaner(
@@ -585,6 +587,7 @@ namespace BilligAGI.Kern
                 }
 
                 enrichedSystem = FuegeAntwortGroundingHinzu(enrichedSystem, input, sensorDaten, weltModell?.zustand);
+                enrichedSystem = FuegePromptSzenarioSimulationHinzu(enrichedSystem, input);
 
                 // LLM-basiert: Iteratives Reasoning oder direkt
                 LLMAntwort mod = null;
@@ -885,6 +888,26 @@ namespace BilligAGI.Kern
                 HatWartendeApiAnfragen();
         }
 
+
+
+        private string FuegePromptSzenarioSimulationHinzu(string systemKontext, string input)
+        {
+            if (promptSzenarioSimulator == null || string.IsNullOrWhiteSpace(input))
+                return systemKontext;
+
+            var analyse = promptSzenarioSimulator.AnalysiereFrage(input, weltModell?.zustand);
+            if (analyse == null || !analyse.aktiv)
+                return systemKontext;
+
+            string block = analyse.AlsKontextBlock();
+            if (string.IsNullOrWhiteSpace(block))
+                return systemKontext;
+
+            if (string.IsNullOrWhiteSpace(systemKontext))
+                return block;
+
+            return systemKontext + "\n\n" + block;
+        }
 
         private string FuegeAntwortGroundingHinzu(string systemKontext, string input, SensorDaten sensorDaten, WeltZustand welt)
         {

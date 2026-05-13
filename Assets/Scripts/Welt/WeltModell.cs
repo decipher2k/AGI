@@ -42,7 +42,35 @@ namespace BilligAGI.Welt
             // Tags sammeln
             weltObj.tags.Add(obj.tag);
 
+            UebernehmePhysikParameter(obj, weltObj);
+
             zustand.objekte[id] = weltObj;
+        }
+
+
+        private void UebernehmePhysikParameter(GameObject obj, WeltObjekt weltObj)
+        {
+            var rb = obj.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                weltObj.masseKg = Mathf.Max(0.001f, rb.mass);
+                weltObj.luftWiderstand = Mathf.Max(0f, rb.drag);
+                weltObj.geschwindigkeit = new float[] { rb.velocity.x, rb.velocity.y, rb.velocity.z };
+            }
+
+            var collider = obj.GetComponent<Collider>();
+            var material = collider != null ? collider.sharedMaterial : null;
+            if (material != null)
+            {
+                weltObj.reibung = Mathf.Clamp01((material.staticFriction + material.dynamicFriction) * 0.5f);
+                weltObj.elastizitaet = Mathf.Clamp01(material.bounciness);
+            }
+
+            string name = obj.name.ToLowerInvariant();
+            if (name.Contains("glas") || name.Contains("glass")) weltObj.bruchSchwelle = 8f;
+            else if (name.Contains("papier") || name.Contains("paper")) weltObj.bruchSchwelle = 2f;
+            else if (name.Contains("stein") || name.Contains("rock")) weltObj.bruchSchwelle = 200f;
+            else if (rb != null) weltObj.bruchSchwelle = Mathf.Max(10f, rb.mass * 25f);
         }
 
         public void EntferneObjekt(string id)
@@ -62,6 +90,9 @@ namespace BilligAGI.Welt
                 var pos = obj.transform.position;
                 string vorher = $"[{weltObj.position[0]:F1},{weltObj.position[1]:F1},{weltObj.position[2]:F1}]";
                 weltObj.position = new float[] { pos.x, pos.y, pos.z };
+                var rb = obj.GetComponent<Rigidbody>();
+                if (rb != null)
+                    weltObj.geschwindigkeit = new float[] { rb.velocity.x, rb.velocity.y, rb.velocity.z };
                 string nachher = $"[{pos.x:F1},{pos.y:F1},{pos.z:F1}]";
                 ProtokollAenderung(id, "bewegt", vorher, nachher);
             }
