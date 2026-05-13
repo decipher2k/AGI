@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using BilligAGI.Modelle;
@@ -135,6 +136,7 @@ namespace BilligAGI.Kern
         private bool apiVerarbeitung;
         private string apiSystemPrompt;
         private bool zyklusLaeuft;
+        private int wartendeApiAnfragen;
 
         /// <summary>Wird gefeuert wenn der AGI-Zyklus eine Antwort generiert hat.</summary>
         public event System.Action<string> OnAntwort;
@@ -984,20 +986,36 @@ namespace BilligAGI.Kern
         public float[] GetLetzterZustandsVektor() => letzterZustandsVektor;
 
         public bool IstBeschaeftigt() => apiVerarbeitung || zyklusLaeuft || !string.IsNullOrWhiteSpace(pendingInput);
+        public bool HatWartendeApiAnfragen() => Volatile.Read(ref wartendeApiAnfragen) > 0;
 
         // ==== API-Server Schnittstelle ====
-        public bool IstBereit() => initialisiert && !apiVerarbeitung && !zyklusLaeuft;
+        public bool IstInitialisiert() => initialisiert;
+        public bool KannApiAnfrageAnnehmen() => initialisiert;
+        public bool IstBereit() => initialisiert && !apiVerarbeitung && !zyklusLaeuft && !HatWartendeApiAnfragen();
+
+        public void RegistriereWartendeApiAnfrage()
+        {
+            Interlocked.Increment(ref wartendeApiAnfragen);
+        }
+
+        public void EntferneWartendeApiAnfrage()
+        {
+            int neu = Interlocked.Decrement(ref wartendeApiAnfragen);
+            if (neu < 0)
+                Interlocked.Exchange(ref wartendeApiAnfragen, 0);
+        }
 
         public async Task<string> VerarbeiteAnfrageAsync(string input, string systemPrompt = null)
         {
             if (!initialisiert) return "[FEHLER] AGI nicht initialisiert";
             if (apiVerarbeitung) return "[FEHLER] AGI verarbeitet bereits eine Anfrage";
 
-            // Falls gerade ein autonomer/periodischer Zyklus laeuft, nicht sofort die
-            // letzte (oft leere) Antwort zurueckgeben. Kurz warten, damit API-Requests
-            // danach ihren eigenen Zyklus inklusive LLM-Call ausfuehren koennen.
+            // Falls gerade ein AutoTrainer-/periodischer Zyklus laeuft oder bereits
+            // ein Trainings-Input vorgemerkt ist, kurz warten. Dadurch ueberschreibt
+            // die API keinen Trainings-Input, bekommt danach aber Prioritaet vor dem
+            // naechsten AutoTrainer-Schritt.
             float warteStart = Time.realtimeSinceStartup;
-            while (zyklusLaeuft)
+            while (zyklusLaeuft || !string.IsNullOrWhiteSpace(pendingInput))
             {
                 if (Time.realtimeSinceStartup - warteStart > 30f)
                     return "[FEHLER] AGI ist noch mit einem vorherigen Zyklus beschaeftigt";

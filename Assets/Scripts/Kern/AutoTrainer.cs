@@ -72,7 +72,13 @@ namespace BilligAGI.Kern
 
         private void Update()
         {
-            if (!trainingAktiv || !agiKern.IstBereit()) return;
+            if (!trainingAktiv || !agiKern.IstInitialisiert()) return;
+
+            // API-Anfragen haben Vorrang: Der AutoTrainer darf den AGI-Kern nicht
+            // dauerhaft mit synthetischen Inputs belegen, sonst erhalten OpenAI-
+            // kompatible Clients nur 503/busy-Antworten.
+            if (agiKern.HatWartendeApiAnfragen())
+                return;
 
             if (wartet)
             {
@@ -81,6 +87,9 @@ namespace BilligAGI.Kern
 
                 wartet = false;
             }
+
+            if (agiKern.IstBeschaeftigt())
+                return;
 
             if (statistik.zyklenGesamt >= maxZyklenProSitzung)
             {
