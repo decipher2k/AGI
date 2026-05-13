@@ -594,7 +594,12 @@ namespace BilligAGI.Kern
                         ? await llm.IterativesNachdenken(input, enrichedSystem, config.reasoningIterationen)
                         : await llm.FreieAnfrage(input, enrichedSystem);
                 }
-                antwort = mod?.inhalt ?? semantik.LokaleDegradation(frame, weltModell.zustand, agentZustand);
+                antwort = !string.IsNullOrWhiteSpace(mod?.inhalt)
+                    ? mod.inhalt
+                    : semantik.LokaleDegradation(frame, weltModell.zustand, agentZustand);
+
+                if (string.IsNullOrWhiteSpace(antwort))
+                    antwort = "Ich konnte gerade keine belastbare Antwort generieren. Bitte versuche es erneut oder pruefe die LLM-Server-Konfiguration.";
 
                 // Interaktion im Arbeitsgedaechtnis registrieren
                 arbeitsGedaechtnis?.RegistriereInteraktion(input, antwort);
@@ -1090,7 +1095,7 @@ namespace BilligAGI.Kern
                 }
 
                 if (string.IsNullOrWhiteSpace(letzteAntwort))
-                    return "[Keine Antwort generiert]";
+                    return "Ich konnte gerade keine Antwort generieren. Bitte versuche es erneut oder pruefe die LLM-Server-Konfiguration.";
 
                 return letzteAntwort;
             }
